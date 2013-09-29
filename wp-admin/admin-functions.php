@@ -43,6 +43,12 @@ function write_post() {
 	if ('static' == $_POST['post_status'] && !current_user_can('edit_pages'))
 		die(__('This user cannot edit pages.'));
 
+	if (!isset ($_POST['comment_status']))
+		$_POST['comment_status'] = 'closed';
+
+	if (!isset ($_POST['ping_status']))
+		$_POST['ping_status'] = 'closed';
+
 	if (!empty ($_POST['edit_date'])) {
 		$aa = $_POST['aa'];
 		$mm = $_POST['mm'];
@@ -84,12 +90,12 @@ function relocate_children($old_ID, $new_ID) {
 function fix_attachment_links($post_ID) {
 	global $wp_rewrite;
 
-	$post = & get_post($post_ID);
+	$post = & get_post($post_ID, ARRAY_A);
 
 	$search = "#<a[^>]+rel=('|\")[^'\"]*attachment[^>]*>#ie";
 
 	// See if we have any rel="attachment" links
-	if ( 0 == preg_match_all($search, $post->post_content, $anchor_matches, PREG_PATTERN_ORDER) )
+	if ( 0 == preg_match_all($search, $post['post_content'], $anchor_matches, PREG_PATTERN_ORDER) )
 		return;
 
 	$i = 0;
@@ -101,9 +107,11 @@ function fix_attachment_links($post_ID) {
 		$id = $id_matches[2];
 
 		// While we have the attachment ID, let's adopt any orphans.
-		$attachment = & get_post($id);
-		if ( ! is_object(get_post($attachment->post_parent)) ) {
-			$attachment->post_parent = $post_ID;
+		$attachment = & get_post($id, ARRAY_A);
+		if ( ! empty($attachment) && ! is_object(get_post($attachment['post_parent'])) ) {
+			$attachment['post_parent'] = $post_ID;
+			// Escape data pulled from DB.
+			$attachment = add_magic_quotes($attachment);
 			wp_update_post($attachment);
 		}
 
@@ -112,7 +120,10 @@ function fix_attachment_links($post_ID) {
 		++$i;
 	}
 
-	$post->post_content = str_replace($post_search, $post_replace, $post->post_content);
+	$post['post_content'] = str_replace($post_search, $post_replace, $post['post_content']);
+
+	// Escape data pulled from DB.
+	$post = add_magic_quotes($post);
 
 	return wp_update_post($post);
 }
@@ -582,7 +593,6 @@ function cat_rows($parent = 0, $level = 0, $categories = 0) {
 		foreach ($categories as $category) {
 			if ($category->category_parent == $parent) {
 				$category->cat_name = wp_specialchars($category->cat_name);
-				$count = $wpdb->get_var("SELECT COUNT(post_id) FROM $wpdb->post2cat WHERE category_id = $category->cat_ID");
 				$pad = str_repeat('&#8212; ', $level);
 				if ( current_user_can('manage_categories') ) {
 					$edit = "<a href='categories.php?action=edit&amp;cat_ID=$category->cat_ID' class='edit'>".__('Edit')."</a></td>";
@@ -599,7 +609,7 @@ function cat_rows($parent = 0, $level = 0, $categories = 0) {
 				$class = ('alternate' == $class) ? '' : 'alternate';
 				echo "<tr id='cat-$category->cat_ID' class='$class'><th scope='row'>$category->cat_ID</th><td>$pad $category->cat_name</td>
 								<td>$category->category_description</td>
-								<td>$count</td>
+								<td>$category->category_count</td>
 								<td>$edit</td>
 								</tr>";
 				cat_rows($category->cat_ID, $level +1, $categories);
