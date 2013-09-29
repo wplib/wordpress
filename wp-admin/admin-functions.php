@@ -319,11 +319,15 @@ function get_comment_to_edit($id) {
 
 	$comment = get_comment($id);
 
-	$comment->comment_content = format_to_edit($comment->comment_content, $richedit);
+	$comment->comment_ID = (int) $comment->comment_ID;
+	$comment->comment_post_ID = (int) $comment->comment_post_ID;
+
+	$comment->comment_content = format_to_edit($comment->comment_content);
 	$comment->comment_content = apply_filters('comment_edit_pre', $comment->comment_content);
 
 	$comment->comment_author = format_to_edit($comment->comment_author);
 	$comment->comment_author_email = format_to_edit($comment->comment_author_email);
+	$comment->comment_author_url = clean_url($comment->comment_author_url);
 	$comment->comment_author_url = format_to_edit($comment->comment_author_url);
 
 	return $comment;
@@ -862,6 +866,7 @@ function list_meta($meta) {
 
 		$entry['meta_key'] = attribute_escape( $entry['meta_key']);
 		$entry['meta_value'] = attribute_escape( $entry['meta_value']);
+		$entry['meta_id'] = (int) $entry['meta_id'];
 		echo "
 			<tr class='$style'>
 				<td valign='top'><input name='meta[{$entry['meta_id']}][key]' tabindex='6' type='text' size='20' value='{$entry['meta_key']}' /></td>
@@ -933,6 +938,8 @@ function add_meta($post_ID) {
 	global $wpdb;
 	$post_ID = (int) $post_ID;
 
+	$protected = array( '_wp_attached_file', '_wp_attachment_metadata', '_wp_old_slug', '_wp_page_template' );
+
 	$metakeyselect = $wpdb->escape(stripslashes(trim($_POST['metakeyselect'])));
 	$metakeyinput = $wpdb->escape(stripslashes(trim($_POST['metakeyinput'])));
 	$metavalue = maybe_serialize(stripslashes((trim($_POST['metavalue']))));
@@ -947,6 +954,9 @@ function add_meta($post_ID) {
 
 		if ($metakeyinput)
 			$metakey = $metakeyinput; // default
+
+		if ( in_array($metakey, $protected) )
+			return false;
 
 		$result = $wpdb->query("
 						INSERT INTO $wpdb->postmeta 
@@ -965,6 +975,12 @@ function delete_meta($mid) {
 
 function update_meta($mid, $mkey, $mvalue) {
 	global $wpdb;
+
+	$protected = array( '_wp_attached_file', '_wp_attachment_metadata', '_wp_old_slug', '_wp_page_template' );
+
+	if ( in_array($mkey, $protected) )
+		return false;
+
 	$mvalue = maybe_serialize(stripslashes($mvalue));
 	$mvalue = $wpdb->escape($mvalue);
 	$mid = (int) $mid;
@@ -1813,6 +1829,7 @@ o.submit();
 }
 </script>
 <form enctype="multipart/form-data" id="uploadForm" method="post" action="<?php echo attribute_escape($action) ?>">
+<?php wp_nonce_field('import-upload'); ?>
 <label for="upload"><?php _e('File:'); ?></label><input type="file" id="upload" name="import" />
 <input type="hidden" name="action" value="save" />
 <div id="buttons">
