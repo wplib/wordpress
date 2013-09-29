@@ -81,7 +81,7 @@ case 'edit':
 	?>
 	<div id='preview' class='wrap'>
 	<h2 id="preview-post"><?php _e('Post Preview (updated when post is saved)'); ?> <small class="quickjump"><a href="#write-post"><?php _e('edit &uarr;'); ?></a></small></h2>
-		<iframe src="<?php echo wp_specialchars(apply_filters('preview_post_link', add_query_arg('preview', 'true', get_permalink($post->ID)))); ?>" width="100%" height="600" ></iframe>
+		<iframe src="<?php echo attribute_escape(apply_filters('preview_post_link', add_query_arg('preview', 'true', get_permalink($post->ID)))); ?>" width="100%" height="600" ></iframe>
 	</div>
 	<?php
 	break;
@@ -338,7 +338,7 @@ case 'editedcomment':
 	$location = ( empty($_POST['referredby']) ? "edit.php?p=$comment_post_ID&c=1" : $_POST['referredby'] ) . '#comment-' . $comment_ID;
 	$location = apply_filters('comment_edit_redirect', $location, $comment_ID);
 	wp_redirect($location);
-
+	exit();
 	break;
 
 default:
