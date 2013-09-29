@@ -616,7 +616,7 @@ class WP_Query {
 		$join = apply_filters('posts_join', $join);
 
 		// Paging
-		if (empty($q['nopaging']) && ! $this->is_single) {
+		if (empty($q['nopaging']) && ! $this->is_single && ! $this->is_page) {
 			$page = $q['paged'];
 			if (empty($page)) {
 				$page = 1;
@@ -826,7 +826,7 @@ class retrospam_mgr {
 					if ( empty( $word ) )
 						continue;
 					$fulltext = strtolower($comment->email.' '.$comment->url.' '.$comment->ip.' '.$comment->text);
-					if( strpos( $fulltext, strtolower($word) ) != FALSE ) {
+					if( false !== strpos( $fulltext, strtolower($word) ) ) {
 						$this->found_comments[] = $comment->ID;
 						break;
 					}
@@ -1604,7 +1604,6 @@ class WP {
 	}
 
 	function send_headers() {
-		global $current_user;
 		@header('X-Pingback: '. get_bloginfo('pingback_url'));
 		if ( is_user_logged_in() )
 			nocache_headers();
@@ -1681,7 +1680,7 @@ class WP {
 	}
 
 	function init() {
-		get_currentuserinfo();
+		wp_get_current_user();
 	}
 
 	function query_posts() {

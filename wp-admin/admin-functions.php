@@ -523,7 +523,7 @@ function checked($checked, $current) {
 
 function return_categories_list($parent = 0) {
 	global $wpdb;
-	return $wpdb->get_col("SELECT cat_ID FROM $wpdb->categories WHERE category_parent = $parent ORDER BY category_count DESC LIMIT 100");
+	return $wpdb->get_col("SELECT cat_ID FROM $wpdb->categories WHERE category_parent = $parent ORDER BY category_count DESC");
 }
 
 function sort_cats($cat1, $cat2) {
@@ -597,9 +597,9 @@ function cat_rows($parent = 0, $level = 0, $categories = 0) {
 				if ( current_user_can('manage_categories') ) {
 					$edit = "<a href='categories.php?action=edit&amp;cat_ID=$category->cat_ID' class='edit'>".__('Edit')."</a></td>";
 					$default_cat_id = get_option('default_category');
-					
+
 					if ($category->cat_ID != $default_cat_id)
-						$edit .= "<td><a href='categories.php?action=delete&amp;cat_ID=$category->cat_ID' onclick=\"return deleteSomething( 'cat', $category->cat_ID, '".sprintf(__("You are about to delete the category &quot;%s&quot;.  All of its posts will go to the default category.\\n&quot;OK&quot; to delete, &quot;Cancel&quot; to stop."), wp_specialchars($category->cat_name, 1))."' );\" class='delete'>".__('Delete')."</a>";
+						$edit .= "<td><a href='" . wp_nonce_url("categories.php?action=delete&amp;cat_ID=$category->cat_ID", 'delete-category_' . $category->cat_ID ) . "' onclick=\"return deleteSomething( 'cat', $category->cat_ID, '" . sprintf(__("You are about to delete the category &quot;%s&quot;.  All of its posts will go to the default category.\\n&quot;OK&quot; to delete, &quot;Cancel&quot; to stop."), wp_specialchars($category->cat_name, 1))."' );\" class='delete'>".__('Delete')."</a>";
 					else
 						$edit .= "<td style='text-align:center'>".__("Default");
 				}
@@ -643,7 +643,7 @@ function page_rows($parent = 0, $level = 0, $pages = 0) {
     <td><?php echo mysql2date('Y-m-d g:i a', $post->post_modified); ?></td> 
 	<td><a href="<?php the_permalink(); ?>" rel="permalink" class="edit"><?php _e('View'); ?></a></td>
     <td><?php if ( current_user_can('edit_pages') ) { echo "<a href='post.php?action=edit&amp;post=$id' class='edit'>" . __('Edit') . "</a>"; } ?></td> 
-    <td><?php if ( current_user_can('edit_pages') ) { echo "<a href='post.php?action=delete&amp;post=$id' class='delete' onclick=\"return deleteSomething( 'page', " . $id . ", '" . sprintf(__("You are about to delete the &quot;%s&quot; page.\\n&quot;OK&quot; to delete, &quot;Cancel&quot; to stop."), wp_specialchars(get_the_title('','',0), 1)) . "' );\">" . __('Delete') . "</a>"; } ?></td> 
+    <td><?php if ( current_user_can('edit_pages') ) { echo "<a href='" . wp_nonce_url("post.php?action=delete&amp;post=$id", 'delete-post_' . $id) .  "' class='delete' onclick=\"return deleteSomething( 'page', " . $id . ", '" . sprintf(__("You are about to delete the &quot;%s&quot; page.\\n&quot;OK&quot; to delete, &quot;Cancel&quot; to stop."), addslashes(wp_specialchars(get_the_title(),'double')) ) . "' );\">" . __('Delete') . "</a>"; } ?></td> 
   </tr> 
 
 <?php
@@ -1767,6 +1767,7 @@ function wp_handle_upload(&$file, $overrides = false) {
 			else
 				$filename = str_replace("$number$ext", ++$number . $ext, $filename);
 		}
+		$filename = preg_replace('#\.(?![^.]+$)#', '-', $filename);
 	}
 
 	// Move the file to the uploads dir

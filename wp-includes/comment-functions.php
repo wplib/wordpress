@@ -34,8 +34,6 @@ function comments_template( $file = '/comments.php' ) {
 		$comments = $wpdb->get_results("SELECT * FROM $wpdb->comments WHERE comment_post_ID = '$post->ID' AND ( comment_approved = '1' OR ( comment_author = '$author_db' AND comment_author_email = '$email_db' AND comment_approved = '0' ) ) ORDER BY comment_date");
 	}
 
-	get_currentuserinfo();
-
 	define('COMMENTS_TEMPLATE', true);
 	$include = apply_filters('comments_template', TEMPLATEPATH . $file );
 	if ( file_exists( $include ) )
@@ -184,6 +182,8 @@ function wp_update_comment($commentarr) {
 
 	// Merge old and new fields with new fields overwriting old ones.
 	$commentarr = array_merge($comment, $commentarr);
+
+	$commentarr = wp_filter_comment( $commentarr );
 
 	// Now extract the merged array.
 	extract($commentarr);
@@ -900,6 +900,8 @@ function check_comment($author, $email, $url, $comment, $user_ip, $user_agent, $
 
 function get_approved_comments($post_id) {
 	global $wpdb;
+
+	$post_id = (int) $post_id;
 	return $wpdb->get_results("SELECT * FROM $wpdb->comments WHERE comment_post_ID = $post_id AND comment_approved = '1' ORDER BY comment_date");
 }
 
