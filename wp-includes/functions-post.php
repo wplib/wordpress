@@ -47,7 +47,7 @@ function wp_insert_post($postarr = array()) {
 	
 	// Get the post ID.
 	if ( $update )
-		$post_ID = $ID;
+		$post_ID = (int) $ID;
 
 	// Create a valid post name.  Drafts are allowed to have an empty
 	// post name.
@@ -406,6 +406,7 @@ function wp_get_recent_posts($num = 10) {
 	global $wpdb;
 
 	// Set the limit clause, if we got a limit
+	$num = (int) $num;
 	if ($num) {
 		$limit = "LIMIT $num";
 	}
@@ -476,6 +477,9 @@ function wp_get_post_cats($blogid = '1', $post_ID = 0) {
 
 function wp_set_post_cats($blogid = '1', $post_ID = 0, $post_categories = array()) {
 	global $wpdb;
+	
+	$post_ID = (int) $post_ID;
+
 	// If $post_categories isn't already an array, make it one:
 	if (!is_array($post_categories) || 0 == count($post_categories))
 		$post_categories = array(get_option('default_category'));
@@ -486,7 +490,7 @@ function wp_set_post_cats($blogid = '1', $post_ID = 0, $post_categories = array(
 	$old_categories = $wpdb->get_col("
 		SELECT category_id 
 		FROM $wpdb->post2cat 
-		WHERE post_id = $post_ID");
+		WHERE post_id = '$post_ID'");
 	
 	if (!$old_categories) {
 		$old_categories = array();
@@ -501,8 +505,8 @@ function wp_set_post_cats($blogid = '1', $post_ID = 0, $post_categories = array(
 		foreach ($delete_cats as $del) {
 			$wpdb->query("
 				DELETE FROM $wpdb->post2cat 
-				WHERE category_id = $del 
-					AND post_id = $post_ID 
+				WHERE category_id = '$del' 
+					AND post_id = '$post_ID' 
 				");
 		}
 	}
@@ -512,12 +516,14 @@ function wp_set_post_cats($blogid = '1', $post_ID = 0, $post_categories = array(
 
 	if ($add_cats) {
 		foreach ($add_cats as $new_cat) {
-			$wpdb->query("
-				INSERT INTO $wpdb->post2cat (post_id, category_id) 
-				VALUES ($post_ID, $new_cat)");
+			$new_cat = (int) $new_cat;
+			if ( !empty($new_cat) )
+				$wpdb->query("
+					INSERT INTO $wpdb->post2cat (post_id, category_id) 
+					VALUES ('$post_ID', '$new_cat')");
 		}
 	}
-	
+
 	// Update category counts.
 	$all_affected_cats = array_unique(array_merge($post_categories, $old_categories));
 	foreach ( $all_affected_cats as $cat_id ) {

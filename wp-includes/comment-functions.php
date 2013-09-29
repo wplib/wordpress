@@ -2,6 +2,12 @@
 
 // Template functions
 
+function wp_comment_form_unfiltered_html_nonce() {
+	global $post;
+	if ( current_user_can('unfiltered_html') )
+		wp_nonce_field('unfiltered-html-comment_' . $post->ID, '_wp_unfiltered_html_comment', false);
+}
+
 function comments_template( $file = '/comments.php' ) {
 	global $wp_query, $withcomments, $post, $wpdb, $id, $comment, $user_login, $user_ID, $user_identity;
 
@@ -84,7 +90,7 @@ function wp_insert_comment($commentdata) {
 	('$comment_post_ID', '$comment_author', '$comment_author_email', '$comment_author_url', '$comment_author_IP', '$comment_date', '$comment_date_gmt', '$comment_content', '$comment_approved', '$comment_agent', '$comment_type', '$comment_parent', '$user_id')
 	");
 
-	$id = $wpdb->insert_id;
+	$id = (int) $wpdb->insert_id;
 
 	if ( $comment_approved == 1) {
 		$count = $wpdb->get_var("SELECT COUNT(*) FROM $wpdb->comments WHERE comment_post_ID = '$comment_post_ID' AND comment_approved = '1'");
@@ -218,7 +224,7 @@ function get_comments_number( $post_id = 0 ) {
 	$post_id = (int) $post_id;
 
 	if ( !$post_id )
-		$post_id = $id;
+		$post_id = (int) $id;
 
 	if ( !isset($comment_count_cache[$post_id]) )
 		$comment_count_cache[$id] = $wpdb->get_var("SELECT comment_count FROM $wpdb->posts WHERE ID = '$post_id'");

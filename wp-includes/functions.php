@@ -171,6 +171,7 @@ function user_pass_ok($user_login,$user_pass) {
 
 function get_usernumposts($userid) {
 	global $wpdb;
+	$userid = (int) $userid;
 	return $wpdb->get_var("SELECT COUNT(*) FROM $wpdb->posts WHERE post_author = '$userid' AND post_status = 'publish'");
 }
 
@@ -606,6 +607,7 @@ function &get_post(&$post, $output = OBJECT) {
 			$post_cache[$post->ID] = &$post;
 		$_post = & $post_cache[$post->ID];
 	} else {
+		$post = (int) $post;
 		if ( $_post = wp_cache_get($post, 'pages') )
 			return get_page($_post, $output);
 		elseif ( isset($post_cache[$post]) )
@@ -709,6 +711,7 @@ function &get_page(&$page, $output = OBJECT) {
 		wp_cache_add($page->ID, $page, 'pages');
 		$_page = $page;
 	} else {
+		$page = (int) $page;
 		if ( isset($GLOBALS['page']) && ($page == $GLOBALS['page']->ID) ) {
 			$_page = & $GLOBALS['page'];
 			wp_cache_add($_page->ID, $_page, 'pages');
@@ -767,6 +770,7 @@ function &get_category(&$category, $output = OBJECT) {
 		wp_cache_add($category->cat_ID, $category, 'category');
 		$_category = $category;
 	} else {
+		$category = (int) $category;
 		if ( ! $_category = wp_cache_get($category, 'category') ) {
 			$_category = $wpdb->get_row("SELECT * FROM $wpdb->categories WHERE cat_ID = '$category' LIMIT 1");
 			wp_cache_add($category, $_category, 'category');
@@ -804,6 +808,7 @@ function &get_comment(&$comment, $output = OBJECT) {
 			$comment_cache[$comment->comment_ID] = &$comment;
 		$_comment = & $comment_cache[$comment->comment_ID];
 	} else {
+		$comment = (int) $comment;
 		if ( !isset($comment_cache[$comment]) ) {
 			$_comment = $wpdb->get_row("SELECT * FROM $wpdb->comments WHERE comment_ID = '$comment' LIMIT 1");
 			$comment_cache[$comment->comment_ID] = & $_comment;
@@ -2019,7 +2024,7 @@ function get_home_template() {
 function get_page_template() {
 	global $wp_query;
 
-	$id = $wp_query->post->ID;
+	$id = (int) $wp_query->post->ID;
 	$template = get_post_meta($id, '_wp_page_template', true);
 
 	if ( 'default' == $template )
@@ -2369,9 +2374,11 @@ function wp_nonce_url($actionurl, $action = -1) {
 	return wp_specialchars(add_query_arg('_wpnonce', wp_create_nonce($action), $actionurl));
 }
 
-function wp_nonce_field($action = -1) {
-	echo '<input type="hidden" name="_wpnonce" value="' . wp_create_nonce($action) . '" />';
-	wp_referer_field();
+function wp_nonce_field($action = -1, $name = "_wpnonce", $referer = true) {
+	$name = attribute_escape($name);
+	echo '<input type="hidden" name="' . $name . '" value="' . wp_create_nonce($action) . '" />';
+	if ( $referer )
+		wp_referer_field();
 }
 
 function wp_referer_field() {
@@ -2486,7 +2493,7 @@ function wp_nonce_ays($action) {
 		$html .= "\t\t<input type='hidden' name='_wpnonce' value='" . wp_create_nonce($action) . "' />\n";
 		$html .= "\t\t<div id='message' class='confirm fade'>\n\t\t<p>" . wp_specialchars(wp_explain_nonce($action)) . "</p>\n\t\t<p><a href='$adminurl'>" . __('No') . "</a> <input type='submit' value='" . __('Yes') . "' /></p>\n\t\t</div>\n\t</form>\n";
 	} else {
-		$html .= "\t<div id='message' class='confirm fade'>\n\t<p>" . wp_specialchars(wp_explain_nonce($action)) . "</p>\n\t<p><a href='$adminurl'>" . __('No') . "</a> <a href='" . attribute_escape(add_query_arg('_wpnonce', wp_create_nonce($action), $_SERVER['REQUEST_URI'])) . "'>" . __('Yes') . "</a></p>\n\t</div>\n";
+		$html .= "\t<div id='message' class='confirm fade'>\n\t<p>" . wp_specialchars(wp_explain_nonce($action)) . "</p>\n\t<p><a href='$adminurl'>" . __('No') . "</a> <a href='" . clean_url(add_query_arg('_wpnonce', wp_create_nonce($action), $_SERVER['REQUEST_URI'])) . "'>" . __('Yes') . "</a></p>\n\t</div>\n";
 	}
 	$html .= "</body>\n</html>";
 	wp_die($html, $title);
