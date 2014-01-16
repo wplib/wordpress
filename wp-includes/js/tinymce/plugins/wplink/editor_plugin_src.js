@@ -1,5 +1,3 @@
-/* global tinymce */
-
 (function() {
 	tinymce.create('tinymce.plugins.wpLink', {
 		/**
@@ -20,7 +18,7 @@
 				ed.windowManager.open({
 					id : 'wp-link',
 					width : 480,
-					height : 'auto',
+					height : "auto",
 					wpDialog : true,
 					title : ed.getLang('advlink.link_desc')
 				}, {
@@ -50,7 +48,7 @@
 				author : 'WordPress',
 				authorurl : 'http://wordpress.org',
 				infourl : '',
-				version : '1.0'
+				version : "1.0"
 			};
 		}
 	});

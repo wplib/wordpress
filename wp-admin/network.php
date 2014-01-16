@@ -136,6 +136,7 @@ get_current_screen()->set_help_sidebar(
 include( ABSPATH . 'wp-admin/admin-header.php' );
 ?>
 <div class="wrap">
+<?php screen_icon('tools'); ?>
 <h2><?php echo esc_html( $title ); ?></h2>
 
 <?php
@@ -291,18 +292,14 @@ function network_step1( $errors = false ) {
 				<th scope='row'><?php esc_html_e( 'Network Title' ); ?></th>
 				<td>
 					<input name='sitename' type='text' size='45' value='<?php echo esc_attr( $site_name ); ?>' />
-					<p class="description">
-						<?php _e( 'What would you like to call your network?' ); ?>
-					</p>
+					<br /><?php _e( 'What would you like to call your network?' ); ?>
 				</td>
 			</tr>
 			<tr>
-				<th scope='row'><?php esc_html_e( 'Network Admin Email' ); ?></th>
+				<th scope='row'><?php esc_html_e( 'Admin E-mail Address' ); ?></th>
 				<td>
 					<input name='email' type='text' size='45' value='<?php echo esc_attr( $admin_email ); ?>' />
-					<p class="description">
-						<?php _e( 'Your email address.' ); ?>
-					</p>
+					<br /><?php _e( 'Your email address.' ); ?>
 				</td>
 			</tr>
 		</table>

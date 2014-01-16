@@ -1,13 +1,11 @@
-/* global tinymce */
-(function() {
-	var mouse = {};
 
+(function() {
 	tinymce.create('tinymce.plugins.wpEditImage', {
 		url: '',
 		editor: {},
 
 		init: function(ed, url) {
-			var t = this;
+			var t = this, mouse = {};
 
 			t.url = url;
 			t.editor = ed;
@@ -29,7 +27,7 @@
 
 				// when pressing Return inside a caption move the caret to a new parapraph under it
 				ed.dom.events.add(ed.getBody(), 'keydown', function(e) {
-					var n, DL, DIV, P;
+					var n, DL, DIV, P, content;
 
 					if ( e.keyCode == 13 ) {
 						n = ed.selection.getNode();
@@ -107,7 +105,7 @@
 
 			// When inserting content, if the caret is inside a caption create new paragraph under
 			// and move the caret there
-			ed.onBeforeExecCommand.add( function( ed, cmd ) {
+			ed.onBeforeExecCommand.add(function(ed, cmd, ui, val) {
 				var node, p;
 
 				if ( cmd == 'mceInsertContent' ) {
@@ -229,7 +227,7 @@
 				title : ed.getLang('wpeditimage.edit_img')
 			});
 
-			tinymce.dom.Event.add(editButton, 'mousedown', function() {
+			tinymce.dom.Event.add(editButton, 'mousedown', function(e) {
 				t._editImage();
 				ed.plugins.wordpress._hideButtons();
 			});
@@ -242,7 +240,7 @@
 				title : ed.getLang('wpeditimage.del_img')
 			});
 
-			tinymce.dom.Event.add(dellButton, 'mousedown', function() {
+			tinymce.dom.Event.add(dellButton, 'mousedown', function(e) {
 				var ed = tinymce.activeEditor, el = ed.selection.getNode(), parent;
 
 				if ( el.nodeName == 'IMG' && ed.dom.getAttrib(el, 'class').indexOf('mceItem') == -1 ) {
@@ -319,7 +317,7 @@
 				author : 'WordPress',
 				authorurl : 'http://wordpress.org',
 				infourl : '',
-				version : '1.0'
+				version : "1.0"
 			};
 		}
 	});

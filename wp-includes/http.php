@@ -545,11 +545,11 @@ function allowed_http_request_hosts( $is_external, $host ) {
  * @return bool
  */
 function ms_allowed_http_request_hosts( $is_external, $host ) {
-	global $wpdb;
+	global $wpdb, $current_site;
 	static $queried = array();
 	if ( $is_external )
 		return $is_external;
-	if ( $host === get_current_site()->domain )
+	if ( $host === $current_site->domain )
 		return true;
 	if ( isset( $queried[ $host ] ) )
 		return $queried[ $host ];

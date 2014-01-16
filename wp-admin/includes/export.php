@@ -30,7 +30,7 @@ function export_wp( $args = array() ) {
 	);
 	$args = wp_parse_args( $args, $defaults );
 
-	do_action( 'export_wp', $args );
+	do_action( 'export_wp' );
 
 	$sitename = sanitize_key( get_bloginfo( 'name' ) );
 	if ( ! empty($sitename) ) $sitename .= '.';

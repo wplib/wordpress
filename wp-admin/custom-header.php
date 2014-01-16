@@ -450,6 +450,7 @@ class Custom_Image_Header {
 ?>
 
 <div class="wrap">
+<?php screen_icon(); ?>
 <h2><?php _e('Custom Header'); ?></h2>
 
 <?php if ( ! empty( $this->updated ) ) { ?>
@@ -723,6 +724,7 @@ wp_nonce_field( 'custom-header-options', '_wpnonce-custom-header-options' ); ?>
 		?>
 
 <div class="wrap">
+<?php screen_icon(); ?>
 <h2><?php _e( 'Crop Header Image' ); ?></h2>
 
 <form method="post" action="<?php echo esc_url(add_query_arg('step', 3)); ?>">

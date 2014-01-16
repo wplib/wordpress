@@ -408,6 +408,7 @@ class Plugin_Upgrader extends WP_Upgrader {
 
 	var $result;
 	var $bulk = false;
+	var $show_before = '';
 
 	function upgrade_strings() {
 		$this->strings['up_to_date'] = __('The plugin is at the latest version.');
@@ -978,7 +979,7 @@ class Theme_Upgrader extends WP_Upgrader {
 
 		do_action( 'upgrader_process_complete', $this, array(
 			'action' => 'update',
-			'type' => 'theme',
+			'type' => 'plugin',
 			'bulk' => true,
 			'themes' => $themes,
 		) );
@@ -1313,9 +1314,7 @@ class Core_Upgrader extends WP_Upgrader {
 	}
 
 	function upgrade( $current, $args = array() ) {
-		global $wp_filesystem;
-
-		include ABSPATH . WPINC . '/version.php'; // $wp_version;
+		global $wp_filesystem, $wp_version;
 
 		$start_time = time();
 
@@ -1334,9 +1333,8 @@ class Core_Upgrader extends WP_Upgrader {
 			return new WP_Error('up_to_date', $this->strings['up_to_date']);
 
 		$res = $this->fs_connect( array(ABSPATH, WP_CONTENT_DIR) );
-		if ( ! $res || is_wp_error( $res ) ) {
+		if ( is_wp_error($res) )
 			return $res;
-		}
 
 		$wp_dir = trailingslashit($wp_filesystem->abspath());
 
@@ -1423,7 +1421,6 @@ class Core_Upgrader extends WP_Upgrader {
 				'fs_method'        => $wp_filesystem->method,
 				'fs_method_forced' => defined( 'FS_METHOD' ) || has_filter( 'filesystem_method' ),
 				'time_taken'       => time() - $start_time,
-				'reported'         => $wp_version,
 				'attempted'        => $current->version,
 			);
 
@@ -1900,11 +1897,6 @@ class WP_Automatic_Updater {
 			'attempt_rollback'   => true, /* only available for core updates */
 		) );
 
-		// if the filesystem is unavailable, false is returned.
-		if ( false === $upgrade_result ) {
-			$upgrade_result = new WP_Error( 'fs_unavailable', __( 'Could not access filesystem.' ) );
-		}
-
 		// Core doesn't output this, so lets append it so we don't get confused
 		if ( 'core' == $type ) {
 			if ( is_wp_error( $upgrade_result ) ) {
@@ -2030,15 +2022,6 @@ class WP_Automatic_Updater {
 
 			if ( ! empty( $this->update_results['core'] ) )
 				$this->after_core_update( $this->update_results['core'][0] );
-
-			/**
-		 	 * Action triggered after all automatic updates have run.
-		 	 *
-		 	 * @since 3.8.0
-		 	 *
-		 	 * @param array $update_results The results of all attempted updates.
-		 	 */
-			do_action( 'automatic_updates_complete', $this->update_results );
 		}
 
 		// Clear the lock
@@ -2326,15 +2309,15 @@ class WP_Automatic_Updater {
 		$body = array();
 		$failures = 0;
 
-		$body[] = sprintf( __( 'WordPress site: %s' ), network_home_url( '/' ) );
+		$body[] = 'WordPress site: ' . network_home_url( '/' );
 
 		// Core
 		if ( isset( $this->update_results['core'] ) ) {
 			$result = $this->update_results['core'][0];
 			if ( $result->result && ! is_wp_error( $result->result ) ) {
-				$body[] = sprintf( __( 'SUCCESS: WordPress was successfully updated to %s' ), $result->name );
+				$body[] = sprintf( 'SUCCESS: WordPress was successfully updated to %s', $result->name );
 			} else {
-				$body[] = sprintf( __( 'FAILED: WordPress failed to update to %s' ), $result->name );
+				$body[] = sprintf( 'FAILED: WordPress failed to update to %s', $result->name );
 				$failures++;
 			}
 			$body[] = '';
@@ -2346,29 +2329,16 @@ class WP_Automatic_Updater {
 				continue;
 			$success_items = wp_list_filter( $this->update_results[ $type ], array( 'result' => true ) );
 			if ( $success_items ) {
-				$messages = array(
-					'plugin'      => __( 'The following plugins were successfully updated:' ),
-					'theme'       => __( 'The following themes were successfully updated:' ),
-					'translation' => __( 'The following translations were successfully updated:' ),
-				);
-
-				$body[] = $messages[ $type ];
-				foreach ( wp_list_pluck( $success_items, 'name' ) as $name ) {
-					$body[] = ' * ' . sprintf( __( 'SUCCESS: %s' ), $name );
-				}
+				$body[] = "The following {$type}s were successfully updated:";
+				foreach ( wp_list_pluck( $success_items, 'name' ) as $name )
+					$body[] = ' * SUCCESS: ' . $name;
 			}
 			if ( $success_items != $this->update_results[ $type ] ) {
 				// Failed updates
-				$messages = array(
-					'plugin'      => __( 'The following plugins failed to update:' ),
-					'theme'       => __( 'The following themes failed to update:' ),
-					'translation' => __( 'The following translations failed to update:' ),
-				);
-
-				$body[] = $messages[ $type ];
+				$body[] = "The following {$type}s failed to update:";
 				foreach ( $this->update_results[ $type ] as $item ) {
 					if ( ! $item->result || is_wp_error( $item->result ) ) {
-						$body[] = ' * ' . sprintf( __( 'FAILED: %s' ), $item->name );
+						$body[] = ' * FAILED: ' . $item->name;
 						$failures++;
 					}
 				}
@@ -2376,26 +2346,25 @@ class WP_Automatic_Updater {
 			$body[] = '';
 		}
 
-		$site_title = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
 		if ( $failures ) {
-			$body[] = __( "
-BETA TESTING?
-=============
-
-This debugging email is sent when you are using a development version of WordPress.
-
-If you think these failures might be due to a bug in WordPress, could you report it?
- * Open a thread in the support forums: http://wordpress.org/support/forum/alphabeta
- * Or, if you're comfortable writing a bug report: http://core.trac.wordpress.org/
-
-Thanks! -- The WordPress Team" );
-
-			$subject = sprintf( __( '[%s] There were failures during background updates' ), $site_title );
+			$body[] = '';
+			$body[] = 'BETA TESTING?';
+			$body[] = '=============';
+			$body[] = '';
+			$body[] = 'This debugging email is sent when you are using a development version of WordPress.';
+			$body[] = '';
+			$body[] = 'If you think these failures might be due to a bug in WordPress, could you report it?';
+			$body[] = ' * Open a thread in the support forums: http://wordpress.org/support/forum/alphabeta';
+			$body[] = " * Or, if you're comfortable writing a bug report: http://core.trac.wordpress.org/";
+			$body[] = '';
+			$body[] = 'Thanks! -- The WordPress Team';
+			$body[] = '';
+			$subject = sprintf( '[%s] There were failures during background updates', get_bloginfo( 'name' ) );
 		} else {
-			$subject = sprintf( __( '[%s] Background updates have finished' ), $site_title );
+			$subject = sprintf( '[%s] Background updates have finished', get_bloginfo( 'name' ) );
 		}
 
-		$body[] = __( 'UPDATE LOG' );
+		$body[] = 'UPDATE LOG';
 		$body[] = '==========';
 		$body[] = '';
 
@@ -2415,15 +2384,7 @@ Thanks! -- The WordPress Team" );
 					foreach ( $results as $result_type => $result ) {
 						if ( ! is_wp_error( $result ) )
 							continue;
-
-						if ( 'rollback' === $result_type ) {
-							/* translators: 1: Error code, 2: Error message. */
-							$body[] = '  ' . sprintf( __( 'Rollback Error: [%1$s] %2$s' ), $result->get_error_code(), $result->get_error_message() );
-						} else {
-							/* translators: 1: Error code, 2: Error message. */
-							$body[] = '  ' . sprintf( __( 'Error: [%1$s] %2$s' ), $result->get_error_code(), $result->get_error_message() );
-						}
-
+						$body[] = '  ' . ( 'rollback' === $result_type ? 'Rollback ' : '' ) . 'Error: [' . $result->get_error_code() . '] ' . $result->get_error_message();
 						if ( $result->get_error_data() )
 							$body[] = '         ' . implode( ', ', (array) $result->get_error_data() );
 					}
@@ -2432,32 +2393,9 @@ Thanks! -- The WordPress Team" );
 			}
 		}
 
-		$email = array(
-			'to'      => get_site_option( 'admin_email' ),
-			'subject' => $subject,
-			'body'    => implode( "\n", $body ),
-			'headers' => ''
-		);
+		//echo "<h1>\n$subject\n</h1>\n";
+		//echo "<pre>\n" . implode( "\n", $body ) . "\n</pre>";
 
-		/**
-		 * Filter the debug email that can be sent following an automatic background core update.
-		 *
-		 * @since 3.8.0
-		 *
-		 * @param array $email {
-		 *     Array of email arguments that will be passed to wp_mail().
-		 *
-		 *     @type string $to      The email recipient. An array of emails can be returned,
-		 *                           as handled by wp_mail().
-		 *     @type string $subject Email subject.
-		 *     @type string $body    Email message body.
-		 *     @type string $headers Any email headers. Default empty.
-		 * }
-		 * @param int   $failures The number of failures encountered while upgrading.
-		 * @param mixed $results  The results of all attempted updates.
-		 */
-		$email = apply_filters( 'automatic_updates_debug_email', $email, $failures, $this->update_results );
-
-		wp_mail( $email['to'], $email['subject'], $email['body'], $email['headers'] );
+		wp_mail( get_site_option( 'admin_email' ), $subject, implode( "\n", $body ) );
 	}
 }

@@ -1,7 +1,16 @@
-/* global tinymce */
+/**
+ * editor_plugin_src.js
+ *
+ * Copyright 2009, Moxiecode Systems AB
+ * Released under LGPL
+ *
+ * License: http://tinymce.moxiecode.com/license
+ * Contributing: http://tinymce.moxiecode.com/contributing
+ */
+
 (function() {
 	tinymce.create('tinymce.plugins.WPDialogs', {
-		init : function( ed ) {
+		init : function(ed, url) {
 			tinymce.create('tinymce.WPWindowManager:tinymce.InlineWindowManager', {
 				WPWindowManager : function(ed) {
 					this.parent(ed);
