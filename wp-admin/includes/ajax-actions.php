@@ -233,14 +233,18 @@ function wp_ajax_autocomplete_user() {
 function wp_ajax_dashboard_widgets() {
 	require_once ABSPATH . 'wp-admin/includes/dashboard.php';
 
-	$pagenow = $_GET['pagenow'];
-	if ( $pagenow === 'dashboard-user' || $pagenow === 'dashboard-network' || $pagenow === 'dashboard' ) {
-		set_current_screen( $pagenow );
-	}
-
 	switch ( $_GET['widget'] ) {
+		case 'dashboard_incoming_links' :
+			wp_dashboard_incoming_links();
+			break;
 		case 'dashboard_primary' :
 			wp_dashboard_primary();
+			break;
+		case 'dashboard_secondary' :
+			wp_dashboard_secondary();
+			break;
+		case 'dashboard_plugins' :
+			wp_dashboard_plugins();
 			break;
 	}
 	wp_die();
@@ -259,7 +263,7 @@ function wp_ajax_logged_in() {
  *
  * Contrary to normal success AJAX response ("1"), die with time() on success.
  *
- * @since 2.7.0
+ * @since 2.7
  *
  * @param int $comment_id
  * @return die
@@ -1230,8 +1234,7 @@ function wp_ajax_menu_get_metabox() {
 		 *
 		 * @since 3.0.0
 		 *
-		 * @param object $menus_meta_box_object A nav menu meta box object, such as Page,
-		 *                                      Post, Category, Tag, etc.
+		 * @param object $menus_meta_box_object A nav menu meta box object, such as Page, Post, Category, Tag, etc.
 		 */
 		$item = apply_filters( 'nav_menu_meta_box_object', $menus_meta_box_object );
 		ob_start();
@@ -1788,8 +1791,16 @@ function wp_ajax_wp_fullscreen_save_post() {
 
 	$post_id = edit_post();
 
-	if ( is_wp_error( $post_id ) ) {
-		wp_send_json_error();
+	if ( is_wp_error($post_id) ) {
+		if ( $post_id->get_error_message() )
+			$message = $post_id->get_error_message();
+		else
+			$message = __('Save failed');
+
+		echo json_encode( array( 'message' => $message, 'last_edited' => '' ) );
+		wp_die();
+	} else {
+		$message = __('Saved.');
 	}
 
 	if ( $post ) {
@@ -1800,14 +1811,15 @@ function wp_ajax_wp_fullscreen_save_post() {
 		$last_time = date_i18n( get_option('time_format') );
 	}
 
-	if ( $last_id = get_post_meta( $post_id, '_edit_last', true ) ) {
-		$last_user = get_userdata( $last_id );
+	if ( $last_id = get_post_meta($post_id, '_edit_last', true) ) {
+		$last_user = get_userdata($last_id);
 		$last_edited = sprintf( __('Last edited by %1$s on %2$s at %3$s'), esc_html( $last_user->display_name ), $last_date, $last_time );
 	} else {
 		$last_edited = sprintf( __('Last edited on %1$s at %2$s'), $last_date, $last_time );
 	}
 
-	wp_send_json_success( array( 'last_edited' => $last_edited ) );
+	echo json_encode( array( 'message' => $message, 'last_edited' => $last_edited ) );
+	wp_die();
 }
 
 function wp_ajax_wp_remove_post_lock() {
@@ -1831,10 +1843,9 @@ function wp_ajax_wp_remove_post_lock() {
 	 *
 	 * @since 3.3.0
 	 *
-	 * @param int $interval The interval in seconds the post lock duration
-	 *                      should last, plus 5 seconds. Default 150.
+	 * @param int $interval The interval in seconds the post lock duration should last, plus 5 seconds. Default 120.
 	 */
-	$new_lock = ( time() - apply_filters( 'wp_check_post_lock_window', 150 ) + 5 ) . ':' . $active_lock[1];
+	$new_lock = ( time() - apply_filters( 'wp_check_post_lock_window', 120 ) + 5 ) . ':' . $active_lock[1];
 	update_post_meta( $post_id, '_edit_lock', $new_lock, implode( ':', $active_lock ) );
 	wp_die( 1 );
 }
@@ -1906,14 +1917,11 @@ function wp_ajax_query_attachments() {
 		$query['post_status'] .= ',private';
 
 	/**
-	 * Filter the arguments passed to WP_Query during an AJAX
-	 * call for querying attachments.
+	 * Filter the arguments passed to WP_Query during an AJAX call for querying attachments.
 	 *
 	 * @since 3.7.0
 	 *
-	 * @see WP_Query::parse_query()
-	 *
-	 * @param array $query An array of query variables.
+	 * @param array $query An array of query variables. @see WP_Query::parse_query()
 	 */
 	$query = apply_filters( 'ajax_query_attachments_args', $query );
 	$query = new WP_Query( $query );
@@ -2235,24 +2243,4 @@ function wp_ajax_get_revision_diffs() {
 		);
 	}
 	wp_send_json_success( $return );
-}
-
-/**
- * Auto-save the selected color scheme for a user's own profile.
- *
- * @since  3.8.0
- */
-function wp_ajax_save_user_color_scheme() {
-	global $_wp_admin_css_colors;
-
-	check_ajax_referer( 'save-color-scheme', 'nonce' );
-
-	$color_scheme = sanitize_key( $_POST['color_scheme'] );
-
-	if ( ! isset( $_wp_admin_css_colors[ $color_scheme ] ) ) {
-		wp_send_json_error();
-	}
-
-	update_user_meta( get_current_user_id(), 'admin_color', $color_scheme );
-	wp_send_json_success();
 }

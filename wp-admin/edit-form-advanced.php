@@ -147,7 +147,7 @@ if ( current_theme_supports( 'post-formats' ) && post_type_supports( $post_type,
 // all taxonomies
 foreach ( get_object_taxonomies( $post ) as $tax_name ) {
 	$taxonomy = get_taxonomy( $tax_name );
-	if ( ! $taxonomy->show_ui || false === $taxonomy->meta_box_cb )
+	if ( ! $taxonomy->show_ui )
 		continue;
 
 	$label = $taxonomy->labels->name;
@@ -359,6 +359,7 @@ require_once( ABSPATH . 'wp-admin/admin-header.php' );
 ?>
 
 <div class="wrap">
+<?php screen_icon(); ?>
 <h2><?php
 echo esc_html( $title );
 if ( isset( $post_new_file ) && current_user_can( $post_type_object->cap->create_posts ) )
@@ -483,10 +484,6 @@ if ( post_type_supports($post_type, 'editor') ) {
 	'dfw' => true,
 	'tabfocus_elements' => 'insert-media-button,save-post',
 	'editor_height' => 360,
-	'tinymce' => array(
-		'resize' => false,
-		'add_unload_trigger' => false,
-	),
 ) ); ?>
 <table id="post-status-info" cellspacing="0"><tbody><tr>
 	<td id="wp-word-count"><?php printf( __( 'Word count: %s' ), '<span class="word-count">0</span>' ); ?></td>
@@ -503,7 +500,6 @@ if ( post_type_supports($post_type, 'editor') ) {
 		echo '</span>';
 	} ?>
 	</td>
-	<td id="content-resize-handle" class="hide-if-no-js"><br /></td>
 </tr></tbody></table>
 
 </div>
@@ -561,7 +557,7 @@ if ( 'page' == $post_type ) {
 	/**
 	 * Fires after 'normal' context meta boxes have been output for the 'page' post type.
 	 *
-	 * @since 1.5.0
+	 * @since 1.5.2
 	 *
 	 * @param WP_Post $post Post object.
 	 */
@@ -571,7 +567,7 @@ else {
 	/**
 	 * Fires after 'normal' context meta boxes have been output for all post types other than 'page'.
 	 *
-	 * @since 1.5.0
+	 * @since 1.5.2
 	 *
 	 * @param WP_Post $post Post object.
 	 */

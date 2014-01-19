@@ -413,7 +413,9 @@ function install_plugin_information() {
 		</ul>
 		<?php if ( ! empty($api->rating) ) : ?>
 		<h2><?php _e('Average Rating') ?></h2>
-		<?php wp_star_rating( array( 'rating' => $api->rating, 'type' => 'percent', 'number' => $api->num_ratings ) ); ?>
+		<div class="star-holder" title="<?php printf(_n('(based on %s rating)', '(based on %s ratings)', $api->num_ratings), number_format_i18n($api->num_ratings)); ?>">
+			<div class="star star-rating" style="width: <?php echo esc_attr( str_replace( ',', '.', $api->rating ) ); ?>px"></div>
+		</div>
 		<small><?php printf(_n('(based on %s rating)', '(based on %s ratings)', $api->num_ratings), number_format_i18n($api->num_ratings)); ?></small>
 		<?php endif; ?>
 	</div>
