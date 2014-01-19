@@ -1,4 +1,10 @@
-var autosave, autosaveLast = '', autosavePeriodical, autosaveDelayPreview = false, notSaved = true, blockSave = false, fullscreen, autosaveLockRelease = true;
+/* global switchEditors, autosaveL10n, tinymce, ajaxurl, wpAjax, makeSlugeditClickable, wpCookies */
+var autosave, autosavePeriodical, fullscreen, doPreview,
+	autosaveLast = '',
+	autosaveDelayPreview = false,
+	notSaved = true,
+	blockSave = false,
+	autosaveLockRelease = true;
 
 jQuery(document).ready( function($) {
 
@@ -15,7 +21,7 @@ jQuery(document).ready( function($) {
 	autosavePeriodical = $.schedule({time: autosaveL10n.autosaveInterval * 1000, func: function() { autosave(); }, repeat: true, protect: true});
 
 	//Disable autosave after the form has been submitted
-	$("#post").submit(function() {
+	$('#post').submit(function() {
 		$.cancel(autosavePeriodical);
 		autosaveLockRelease = false;
 	});
@@ -37,23 +43,13 @@ jQuery(document).ready( function($) {
 	});
 
 	window.onbeforeunload = function(){
-		var editor = typeof(tinymce) != 'undefined' ? tinymce.activeEditor : false, compareString;
+		var editor = typeof(tinymce) != 'undefined' ? tinymce.activeEditor : false;
 
 		if ( editor && ! editor.isHidden() ) {
 			if ( editor.isDirty() )
 				return autosaveL10n.saveAlert;
 		} else {
-			if ( fullscreen && fullscreen.settings.visible ) {
-				compareString = wp.autosave.getCompareString({
-					post_title: $('#wp-fullscreen-title').val() || '',
-					content: $('#wp_mce_fullscreen').val() || '',
-					excerpt: $('#excerpt').val() || ''
-				});
-			} else {
-				compareString = wp.autosave.getCompareString();
-			}
-
-			if ( compareString != autosaveLast )
+			if ( wp.autosave.getCompareString() != autosaveLast )
 				return autosaveL10n.saveAlert;
 		}
 	};
@@ -106,28 +102,26 @@ jQuery(document).ready( function($) {
 		}
 
 		$('input#wp-preview').val('');
-	}
+	};
 
 	// This code is meant to allow tabbing from Title to Post content.
-	$('#title').on('keydown.editor-focus', function(e) {
-		var ed;
+	$('#title').on( 'keydown.editor-focus', function( event ) {
+		var editor;
 
-		if ( e.which != 9 )
-			return;
+		if ( event.which === 9 && ! event.ctrlKey && ! event.altKey && ! event.shiftKey ) {
+			if ( typeof tinymce !== 'undefined' ) {
+				editor = tinymce.get('content');
+			}
 
-		if ( !e.ctrlKey && !e.altKey && !e.shiftKey ) {
-			if ( typeof(tinymce) != 'undefined' )
-				ed = tinymce.get('content');
-
-			if ( ed && !ed.isHidden() ) {
-				$(this).one('keyup', function(e){
-					$('#content_tbl td.mceToolbar > a').focus();
+			if ( editor && ! editor.isHidden() ) {
+				$(this).one( 'keyup', function() {
+					editor.focus();
 				});
 			} else {
 				$('#content').focus();
 			}
 
-			e.preventDefault();
+			event.preventDefault();
 		}
 	});
 
@@ -282,7 +276,7 @@ autosave = function() {
 		return false;
 
 	// No autosave while thickbox is open (media buttons)
-	if ( jQuery("#TB_window").css('display') == 'block' )
+	if ( jQuery('#TB_window').css('display') == 'block' )
 		return false;
 
 	compareString = wp.autosave.getCompareString( post_data );
@@ -292,12 +286,12 @@ autosave = function() {
 		return false;
 
 	autosaveLast = compareString;
-	jQuery(document).triggerHandler('wpcountwords', [ post_data["content"] ]);
+	jQuery(document).triggerHandler('wpcountwords', [ post_data.content ]);
 
 	// Disable buttons until we know the save completed.
 	autosave_disable_buttons();
 
-	if ( post_data["auto_draft"] == '1' ) {
+	if ( post_data.auto_draft == '1' ) {
 		successCallback = autosave_saved_new; // new post
 	} else {
 		successCallback = autosave_saved; // pre-existing post
@@ -306,13 +300,13 @@ autosave = function() {
 	jQuery.ajax({
 		data: post_data,
 		beforeSend: autosave_loading,
-		type: "POST",
+		type: 'POST',
 		url: ajaxurl,
 		success: successCallback
 	});
 
 	return true;
-}
+};
 
 // Autosave in localStorage
 // set as simple object/mixin for now
@@ -339,20 +333,12 @@ wp.autosave.getPostData = function() {
 			data.autosave = false;
 			return data;
 		} else {
-			if ( 'mce_fullscreen' == ed.id )
-				tinymce.get('content').setContent(ed.getContent({format : 'raw'}), {format : 'raw'});
-
 			tinymce.triggerSave();
 		}
 	}
 
-	if ( typeof fullscreen != 'undefined' && fullscreen.settings.visible ) {
-		data['post_title'] = $('#wp-fullscreen-title').val() || '';
-		data['content'] = $('#wp_mce_fullscreen').val() || '';
-	} else {
-		data['post_title'] = $('#title').val() || '';
-		data['content'] = $('#content').val() || '';
-	}
+	data.post_title = $('#title').val() || '';
+	data.content = $('#content').val() || '';
 
 	/*
 	// We haven't been saving tags with autosave since 2.8... Start again?
@@ -364,22 +350,22 @@ wp.autosave.getPostData = function() {
 	$('input[id^="in-category-"]:checked').each( function() {
 		cats.push(this.value);
 	});
-	data['catslist'] = cats.join(',');
+	data.catslist = cats.join(',');
 
 	if ( post_name = $('#post_name').val() )
-		data['post_name'] = post_name;
+		data.post_name = post_name;
 
 	if ( parent_id = $('#parent_id').val() )
-		data['parent_id'] = parent_id;
+		data.parent_id = parent_id;
 
 	if ( $('#comment_status').prop('checked') )
-		data['comment_status'] = 'open';
+		data.comment_status = 'open';
 
 	if ( $('#ping_status').prop('checked') )
-		data['ping_status'] = 'open';
+		data.ping_status = 'open';
 
 	if ( $('#auto_draft').val() == '1' )
-		data['auto_draft'] = '1';
+		data.auto_draft = '1';
 
 	return data;
 };
@@ -520,8 +506,8 @@ wp.autosave.local = {
 		if ( compareString == this.lastSavedData )
 			return false;
 
-		post_data['save_time'] = (new Date()).getTime();
-		post_data['status'] = $('#post_status').val() || '';
+		post_data.save_time = (new Date()).getTime();
+		post_data.status = $('#post_status').val() || '';
 		result = this.setData( post_data );
 
 		if ( result )
