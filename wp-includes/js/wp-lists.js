@@ -1,4 +1,3 @@
-/* global ajaxurl, wpAjax */
 (function($) {
 var fs = {add:'ajaxAdd',del:'ajaxDel',dim:'ajaxDim',process:'process',recolor:'recolor'}, wpList;
 

@@ -115,10 +115,7 @@ function wp_reset_query() {
  */
 function wp_reset_postdata() {
 	global $wp_query;
-
-	if ( isset( $wp_query ) ) {
-		$wp_query->reset_postdata();
-	}
+	$wp_query->reset_postdata();
 }
 
 /*
@@ -175,10 +172,9 @@ function is_post_type_archive( $post_types = '' ) {
  * @since 2.0.0
  * @uses $wp_query
  *
- * @param mixed $attachment Attachment ID, title, slug, or array of such.
  * @return bool
  */
-function is_attachment( $attachment = '' ) {
+function is_attachment() {
 	global $wp_query;
 
 	if ( ! isset( $wp_query ) ) {
@@ -186,7 +182,7 @@ function is_attachment( $attachment = '' ) {
 		return false;
 	}
 
-	return $wp_query->is_attachment( $attachment );
+	return $wp_query->is_attachment();
 }
 
 /**
@@ -1716,7 +1712,7 @@ class WP_Query {
 		do_action_ref_array('parse_query', array(&$this));
 	}
 
-	/**
+	/*
 	 * Parses various taxonomy related query vars.
 	 *
 	 * @access protected
@@ -1771,39 +1767,26 @@ class WP_Query {
 		}
 
 		// Category stuff
-		if ( ! empty( $q['cat'] ) && ! $this->is_singular ) {
-			$cat_in = $cat_not_in = array();
-
-			$cat_array = preg_split( '/[,\s]+/', urldecode( $q['cat'] ) );
-			$cat_array = array_map( 'intval', $cat_array );
-			$q['cat'] = implode( ',', $cat_array );
-
-			foreach ( $cat_array as $cat ) {
-				if ( $cat > 0 )
-					$cat_in[] = $cat;
-				elseif ( $cat < 0 )
-					$cat_not_in[] = abs( $cat );
+		if ( !empty($q['cat']) && '0' != $q['cat'] && !$this->is_singular && $this->query_vars_changed ) {
+			$q['cat'] = ''.urldecode($q['cat']).'';
+			$q['cat'] = addslashes_gpc($q['cat']);
+			$cat_array = preg_split('/[,\s]+/', $q['cat']);
+			$q['cat'] = '';
+			$req_cats = array();
+			foreach ( (array) $cat_array as $cat ) {
+				$cat = intval($cat);
+				$req_cats[] = $cat;
+				$in = ($cat > 0);
+				$cat = abs($cat);
+				if ( $in ) {
+					$q['category__in'][] = $cat;
+					$q['category__in'] = array_merge( $q['category__in'], get_term_children($cat, 'category') );
+				} else {
+					$q['category__not_in'][] = $cat;
+					$q['category__not_in'] = array_merge( $q['category__not_in'], get_term_children($cat, 'category') );
+				}
 			}
-
-			if ( ! empty( $cat_in ) ) {
-				$tax_query[] = array(
-					'taxonomy' => 'category',
-					'terms' => $cat_in,
-					'field' => 'term_id',
-					'include_children' => true
-				);
-			}
-
-			if ( ! empty( $cat_not_in ) ) {
-				$tax_query[] = array(
-					'taxonomy' => 'category',
-					'terms' => $cat_not_in,
-					'field' => 'term_id',
-					'operator' => 'NOT IN',
-					'include_children' => true
-				);
-			}
-			unset( $cat_array, $cat_in, $cat_not_in );
+			$q['cat'] = implode(',', $req_cats);
 		}
 
 		if ( ! empty( $q['category__and'] ) && 1 === count( (array) $q['category__and'] ) ) {
@@ -1928,9 +1911,8 @@ class WP_Query {
 	 *
 	 * @since 3.7.0
 	 *
-	 * @global wpdb $wpdb
+	 * @global type $wpdb
 	 * @param array $q Query variables.
-	 * @return string WHERE clause.
 	 */
 	protected function parse_search( &$q ) {
 		global $wpdb;
@@ -2035,7 +2017,6 @@ class WP_Query {
 		$words = explode( ',', _x( 'about,an,are,as,at,be,by,com,for,from,how,in,is,it,of,on,or,that,the,this,to,was,what,when,where,who,will,with,www',
 			'Comma-separated list of search stopwords in your language' ) );
 
-		$stopwords = array();
 		foreach( $words as $word ) {
 			$word = trim( $word, "\r\n\t " );
 			if ( $word )
@@ -3267,32 +3248,20 @@ class WP_Query {
 		$this->queried_object_id = 0;
 
 		if ( $this->is_category || $this->is_tag || $this->is_tax ) {
-			if ( $this->is_category ) {
-				if ( $this->get( 'cat' ) ) {
-					$term = get_term( $this->get( 'cat' ), 'category' );
-				} elseif ( $this->get( 'category_name' ) ) {
-					$term = get_term_by( 'slug', $this->get( 'category_name' ), 'category' );
-				}
-			} elseif ( $this->is_tag ) {
-				$term = get_term( $this->get( 'tag_id' ), 'post_tag' );
-			} else {
-				$tax_query_in_and = wp_list_filter( $this->tax_query->queries, array( 'operator' => 'NOT IN' ), 'NOT' );
-				$query = reset( $tax_query_in_and );
+			$tax_query_in_and = wp_list_filter( $this->tax_query->queries, array( 'operator' => 'NOT IN' ), 'NOT' );
 
-				if ( $query['terms'] ) {
-					if ( 'term_id' == $query['field'] ) {
-						$term = get_term( reset( $query['terms'] ), $query['taxonomy'] );
-					} else {
-						$term = get_term_by( $query['field'], reset( $query['terms'] ), $query['taxonomy'] );
-					}
-				}
-			}
+			$query = reset( $tax_query_in_and );
+
+			if ( 'term_id' == $query['field'] )
+				$term = get_term( reset( $query['terms'] ), $query['taxonomy'] );
+			elseif ( $query['terms'] )
+				$term = get_term_by( $query['field'], reset( $query['terms'] ), $query['taxonomy'] );
 
 			if ( ! empty( $term ) && ! is_wp_error( $term ) )  {
 				$this->queried_object = $term;
 				$this->queried_object_id = (int) $term->term_id;
 
-				if ( $this->is_category && 'category' === $this->queried_object->taxonomy )
+				if ( $this->is_category )
 					_make_cat_compat( $this->queried_object );
 			}
 		} elseif ( $this->is_post_type_archive ) {
@@ -3388,30 +3357,10 @@ class WP_Query {
 	 *
 	 * @since 3.1.0
 	 *
-	 * @param mixed $attachment Attachment ID, title, slug, or array of such.
 	 * @return bool
 	 */
-	function is_attachment( $attachment = '' ) {
-		if ( ! $this->is_attachment ) {
-			return false;
-		}
-
-		if ( empty( $attachment ) ) {
-			return true;
-		}
-
-		$attachment = (array) $attachment;
-
-		$post_obj = $this->get_queried_object();
-
-		if ( in_array( $post_obj->ID, $attachment ) ) {
-			return true;
-		} elseif ( in_array( $post_obj->post_title, $attachment ) ) {
-			return true;
-		} elseif ( in_array( $post_obj->post_name, $attachment ) ) {
-			return true;
-		}
-		return false;
+	function is_attachment() {
+		return (bool) $this->is_attachment;
 	}
 
 	/**

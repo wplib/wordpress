@@ -167,6 +167,7 @@ default:
 </div>
 <?php endif; ?>
 <div class="wrap">
+<?php screen_icon(); ?>
 <h2><?php echo esc_html( $title ); ?></h2>
 
 <div class="fileedit-sub">

@@ -452,7 +452,7 @@ function wp_list_categories( $args = '' ) {
 	if ( empty( $categories ) ) {
 		if ( ! empty( $show_option_none ) ) {
 			if ( 'list' == $style )
-				$output .= '<li class="cat-item-none">' . $show_option_none . '</li>';
+				$output .= '<li>' . $show_option_none . '</li>';
 			else
 				$output .= $show_option_none;
 		}
@@ -461,7 +461,7 @@ function wp_list_categories( $args = '' ) {
 			$posts_page = ( 'page' == get_option( 'show_on_front' ) && get_option( 'page_for_posts' ) ) ? get_permalink( get_option( 'page_for_posts' ) ) : home_url( '/' );
 			$posts_page = esc_url( $posts_page );
 			if ( 'list' == $style )
-				$output .= "<li class='cat-item-all'><a href='$posts_page'>$show_option_all</a></li>";
+				$output .= "<li><a href='$posts_page'>$show_option_all</a></li>";
 			else
 				$output .= "<a href='$posts_page'>$show_option_all</a>";
 		}
@@ -1042,7 +1042,7 @@ function the_tags( $before = null, $sep = ', ', $after = '' ) {
 /**
  * Retrieve tag description.
  *
- * @since 2.8.0
+ * @since 2.8
  *
  * @param int $tag Optional. Tag ID. Will use global tag ID by default.
  * @return string Tag description, available.
@@ -1054,7 +1054,7 @@ function tag_description( $tag = 0 ) {
 /**
  * Retrieve term description.
  *
- * @since 2.8.0
+ * @since 2.8
  *
  * @param int $term Optional. Term ID. Will use global term ID by default.
  * @param string $taxonomy Optional taxonomy name. Defaults to 'post_tag'.
