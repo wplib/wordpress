@@ -247,7 +247,7 @@ add_action( 'update_option_page_on_front', 'update_home_siteurl', 10, 2 );
 /**
  * Shorten an URL, to be used as link text
  *
- * @since 1.2.1
+ * @since 1.2.0
  *
  * @param string $url
  * @return string
@@ -346,7 +346,7 @@ function wp_doc_link_parse( $content ) {
 /**
  * Saves option for number of rows when listing posts, pages, comments, etc.
  *
- * @since 2.8
+ * @since 2.8.0
 **/
 function set_screen_options() {
 
@@ -561,29 +561,80 @@ function saveDomDocument($doc, $filename) {
  *
  * @since 3.0.0
  */
-function admin_color_scheme_picker() {
-	global $_wp_admin_css_colors, $user_id; ?>
-<fieldset><legend class="screen-reader-text"><span><?php _e('Admin Color Scheme')?></span></legend>
-<?php
-$current_color = get_user_option('admin_color', $user_id);
-if ( empty($current_color) )
-	$current_color = 'fresh';
-foreach ( $_wp_admin_css_colors as $color => $color_info ): ?>
-<div class="color-option"><input name="admin_color" id="admin_color_<?php echo esc_attr( $color ); ?>" type="radio" value="<?php echo esc_attr( $color ); ?>" class="tog" <?php checked($color, $current_color); ?> />
-	<table class="color-palette">
-	<tr>
-	<?php foreach ( $color_info->colors as $html_color ): ?>
-	<td style="background-color: <?php echo esc_attr( $html_color ); ?>" title="<?php echo esc_attr( $color ); ?>">&nbsp;</td>
-	<?php endforeach; ?>
-	</tr>
-	</table>
+function admin_color_scheme_picker( $user_id ) {
+	global $_wp_admin_css_colors;
 
-	<label for="admin_color_<?php echo esc_attr( $color ); ?>"><?php echo esc_html( $color_info->name ); ?></label>
-</div>
-	<?php endforeach; ?>
-</fieldset>
-<?php
+	ksort( $_wp_admin_css_colors );
+
+	if ( isset( $_wp_admin_css_colors['fresh'] ) ) {
+		// Set Default ('fresh') and Light should go first.
+		$_wp_admin_css_colors = array_filter( array_merge( array( 'fresh' => '', 'light' => '' ), $_wp_admin_css_colors ) );
+	}
+
+	$current_color = get_user_option( 'admin_color', $user_id );
+
+	if ( empty( $current_color ) || ! isset( $_wp_admin_css_colors[ $current_color ] ) ) {
+		$current_color = 'fresh';
+	}
+
+	?>
+	<fieldset id="color-picker" class="scheme-list">
+		<legend class="screen-reader-text"><span><?php _e( 'Admin Color Scheme' ); ?></span></legend>
+		<?php
+		wp_nonce_field( 'save-color-scheme', 'color-nonce', false );
+		foreach ( $_wp_admin_css_colors as $color => $color_info ) :
+
+			?>
+			<div class="color-option <?php echo ( $color == $current_color ) ? 'selected' : ''; ?>">
+				<input name="admin_color" id="admin_color_<?php echo esc_attr( $color ); ?>" type="radio" value="<?php echo esc_attr( $color ); ?>" class="tog" <?php checked( $color, $current_color ); ?> />
+				<input type="hidden" class="css_url" value="<?php echo esc_url( $color_info->url ); ?>" />
+				<input type="hidden" class="icon_colors" value="<?php echo esc_attr( json_encode( array( 'icons' => $color_info->icon_colors ) ) ); ?>" />
+				<label for="admin_color_<?php echo esc_attr( $color ); ?>"><?php echo esc_html( $color_info->name ); ?></label>
+				<table class="color-palette">
+					<tr>
+					<?php
+
+					foreach ( $color_info->colors as $html_color ) {
+						?>
+						<td style="background-color: <?php echo esc_attr( $html_color ); ?>">&nbsp;</td>
+						<?php
+					}
+
+					?>
+					</tr>
+				</table>
+			</div>
+			<?php
+
+		endforeach;
+
+	?>
+	</fieldset>
+	<?php
 }
+
+function wp_color_scheme_settings() {
+	global $_wp_admin_css_colors;
+
+	$color_scheme = get_user_option( 'admin_color' );
+
+	// It's possible to have a color scheme set that is no longer registered.
+	if ( empty( $_wp_admin_css_colors[ $color_scheme ] ) ) {
+		$color_scheme = 'fresh';
+	}
+
+	if ( ! empty( $_wp_admin_css_colors[ $color_scheme ]->icon_colors ) ) {
+		$icon_colors = $_wp_admin_css_colors[ $color_scheme ]->icon_colors;
+	} elseif ( ! empty( $_wp_admin_css_colors['fresh']->icon_colors ) ) {
+		$icon_colors = $_wp_admin_css_colors['fresh']->icon_colors;
+	} else {
+		// Fall back to the default set of icon colors if the default scheme is missing.
+		$icon_colors = array( 'base' => '#999', 'focus' => '#2ea2cc', 'current' => '#fff' );
+	}
+
+	echo '<script type="text/javascript">var _wpColorScheme = ' . json_encode( array( 'icons' => $icon_colors ) ) . ";</script>\n";
+}
+add_action( 'admin_head', 'wp_color_scheme_settings' );
 
 function _ipad_meta() {
 	if ( wp_is_mobile() ) {
@@ -597,7 +648,7 @@ add_action('admin_head', '_ipad_meta');
 /**
  * Check lock status for posts displayed on the Posts screen
  *
- * @since 3.6
+ * @since 3.6.0
  */
 function wp_check_locked_posts( $response, $data, $screen_id ) {
 	$checked = array();
@@ -628,7 +679,7 @@ add_filter( 'heartbeat_received', 'wp_check_locked_posts', 10, 3 );
 /**
  * Check lock status on the New/Edit Post screen and refresh the lock
  *
- * @since 3.6
+ * @since 3.6.0
  */
 function wp_refresh_post_lock( $response, $data, $screen_id ) {
 	if ( array_key_exists( 'wp-refresh-post-lock', $data ) ) {
@@ -667,7 +718,7 @@ add_filter( 'heartbeat_received', 'wp_refresh_post_lock', 10, 3 );
 /**
  * Check nonce expiration on the New/Edit Post screen and refresh if needed
  *
- * @since 3.6
+ * @since 3.6.0
  */
 function wp_refresh_post_nonces( $response, $data, $screen_id ) {
 	if ( array_key_exists( 'wp-refresh-post-nonces', $data ) ) {
@@ -683,7 +734,6 @@ function wp_refresh_post_nonces( $response, $data, $screen_id ) {
 		if ( 2 === wp_verify_nonce( $received['post_nonce'], 'update-post_' . $post_id ) ) {
 			$response['wp-refresh-post-nonces'] = array(
 				'replace' => array(
-					'autosavenonce' => wp_create_nonce('autosave'),
 					'getpermalinknonce' => wp_create_nonce('getpermalink'),
 					'samplepermalinknonce' => wp_create_nonce('samplepermalink'),
 					'closedpostboxesnonce' => wp_create_nonce('closedpostboxes'),
@@ -698,3 +748,48 @@ function wp_refresh_post_nonces( $response, $data, $screen_id ) {
 	return $response;
 }
 add_filter( 'heartbeat_received', 'wp_refresh_post_nonces', 10, 3 );
+
+/**
+ * Disable suspension of Heartbeat on the Add/Edit Post screens.
+ *
+ * @since 3.8.0
+ *
+ * @param array $settings An array of Heartbeat settings.
+ * @return array Filtered Heartbeat settings.
+ */
+function wp_heartbeat_set_suspension( $settings ) {
+	global $pagenow;
+
+	if ( 'post.php' === $pagenow || 'post-new.php' === $pagenow ) {
+		$settings['suspension'] = 'disable';
+	}
+
+	return $settings;
+}
+add_filter( 'heartbeat_settings', 'wp_heartbeat_set_suspension' );
+
+/**
+ * Autosave with heartbeat
+ *
+ * @since 3.9
+ */
+function heartbeat_autosave( $response, $data ) {
+	if ( ! empty( $data['wp_autosave'] ) ) {
+		$saved = wp_autosave( $data['wp_autosave'] );
+
+		if ( is_wp_error( $saved ) ) {
+			$response['wp_autosave'] = array( 'success' => false, 'message' => $saved->get_error_message() );
+		} elseif ( empty( $saved ) ) {
+			$response['wp_autosave'] = array( 'success' => false, 'message' => __( 'Error while saving.' ) );
+		} else {
+			/* translators: draft saved date format, see http://php.net/date */
+			$draft_saved_date_format = __( 'g:i:s a' );
+			/* translators: %s: date and time */
+			$response['wp_autosave'] = array( 'success' => true, 'message' => sprintf( __( 'Draft saved at %s.' ), date_i18n( $draft_saved_date_format ) ) );
+		}
+	}
+
+	return $response;
+}
+// Run later as we have to set DOING_AUTOSAVE for back-compat
+add_filter( 'heartbeat_received', 'heartbeat_autosave', 500, 2 );
