@@ -43,15 +43,6 @@ final class WP_Theme implements ArrayAccess {
 		'twentyeleven'   => 'Twenty Eleven',
 		'twentytwelve'   => 'Twenty Twelve',
 		'twentythirteen' => 'Twenty Thirteen',
-		'twentyfourteen' => 'Twenty Fourteen',
-	);
-
-	/**
-	 * Renamed theme tags.
-	 */
-	private static $tag_map = array(
-		'fixed-width'    => 'fixed-layout',
-		'flexible-width' => 'fluid-layout',
 	);
 
 	/**
@@ -179,7 +170,6 @@ final class WP_Theme implements ArrayAccess {
 
 		// Initialize caching on first run.
 		if ( ! isset( self::$persistently_cache ) ) {
-			/** This action is documented in wp-includes/theme.php */
 			self::$persistently_cache = apply_filters( 'wp_cache_themes_persistently', false, 'WP_Theme' );
 			if ( self::$persistently_cache ) {
 				wp_cache_add_global_groups( 'themes' );
@@ -715,11 +705,8 @@ final class WP_Theme implements ArrayAccess {
 				}
 
 				foreach ( $value as &$tag ) {
-					if ( isset( $tags_list[ $tag ] ) ) {
+					if ( isset( $tags_list[ $tag ] ) )
 						$tag = $tags_list[ $tag ];
-					} elseif ( isset( self::$tag_map[ $tag ] ) ) {
-						$tag = $tags_list[ self::$tag_map[ $tag ] ];
-					}
 				}
 
 				return $value;
@@ -1087,13 +1074,6 @@ final class WP_Theme implements ArrayAccess {
 	 * @return array Array of stylesheet names.
 	 */
 	public static function get_allowed( $blog_id = null ) {
-		/**
-		 * Filter the array of themes allowed on the site or network.
-		 *
-		 * @since MU
-		 *
-		 * @param array $allowed_themes An array of theme stylesheet names.
-		 */
 		$network = (array) apply_filters( 'allowed_themes', self::get_allowed_on_network() );
 		return $network + self::get_allowed_on_site( $blog_id );
 	}

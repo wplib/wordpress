@@ -1,4 +1,3 @@
-/* global mejs, _wpmejsSettings */
 (function ($) {
 	// add mime-type aliases to MediaElement plugin support
 	mejs.plugins.silverlight[0].types.push('video/x-ms-wmv');

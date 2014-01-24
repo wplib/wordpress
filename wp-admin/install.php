@@ -56,7 +56,6 @@ function display_header() {
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" <?php language_attributes(); ?>>
 <head>
-	<meta name="viewport" content="width=device-width" />
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<title><?php _e( 'WordPress &rsaquo; Installation' ); ?></title>
 	<?php
@@ -250,10 +249,8 @@ switch($step) {
 		}
 		break;
 }
-if ( !wp_is_mobile() ) {
 ?>
 <script type="text/javascript">var t = document.getElementById('weblog_title'); if (t){ t.focus(); }</script>
-<?php } ?>
 <?php wp_print_scripts( 'user-profile' ); ?>
 </body>
 </html>
