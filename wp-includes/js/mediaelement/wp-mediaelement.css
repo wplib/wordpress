@@ -102,6 +102,7 @@
 }
 
 .wp-playlist-caption {
+	display: block;
 	max-width: 88%;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -113,6 +114,8 @@
 .wp-playlist-item .wp-playlist-caption {
 	text-decoration: none;
 	color: #000;
+	max-width: -webkit-calc(100% - 40px);
+	max-width: calc(100% - 40px);
 }
 
 .wp-playlist-item-meta {
