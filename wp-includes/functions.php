@@ -3274,4 +3274,920 @@ function wp_guess_url() {
  *
  * @since 3.3.0
  *
- * @param bool $suspend Optional. Suspends additions if true, re-e
+ * @param bool $suspend Optional. Suspends additions if true, re-enables them if false.
+ * @return bool The current suspend setting
+ */
+function wp_suspend_cache_addition( $suspend = null ) {
+	static $_suspend = false;
+
+	if ( is_bool( $suspend ) )
+		$_suspend = $suspend;
+
+	return $_suspend;
+}
+
+/**
+ * Suspend cache invalidation.
+ *
+ * Turns cache invalidation on and off. Useful during imports where you don't wont to do invalidations
+ * every time a post is inserted. Callers must be sure that what they are doing won't lead to an inconsistent
+ * cache when invalidation is suspended.
+ *
+ * @since 2.7.0
+ *
+ * @param bool $suspend Whether to suspend or enable cache invalidation
+ * @return bool The current suspend setting
+ */
+function wp_suspend_cache_invalidation($suspend = true) {
+	global $_wp_suspend_cache_invalidation;
+
+	$current_suspend = $_wp_suspend_cache_invalidation;
+	$_wp_suspend_cache_invalidation = $suspend;
+	return $current_suspend;
+}
+
+/**
+ * Whether a site is the main site of the current network.
+ *
+ * @since 3.0.0
+ *
+ * @param int $site_id Optional. Site ID to test. Defaults to current site.
+ * @return bool True if $site_id is the main site of the network, or if not running multisite.
+ */
+function is_main_site( $site_id = null ) {
+	// This is the current network's information; 'site' is old terminology.
+	global $current_site;
+
+	if ( ! is_multisite() )
+		return true;
+
+	if ( ! $site_id )
+		$site_id = get_current_blog_id();
+
+	return (int) $site_id === (int) $current_site->blog_id;
+}
+
+/**
+ * Whether a network is the main network of the multisite install.
+ *
+ * @since 3.7.0
+ *
+ * @param int $network_id Optional. Network ID to test. Defaults to current network.
+ * @return bool True if $network_id is the main network, or if not running multisite.
+ */
+function is_main_network( $network_id = null ) {
+	global $wpdb;
+
+	if ( ! is_multisite() )
+		return true;
+
+	$current_network_id = (int) get_current_site()->id;
+
+	if ( ! $network_id )
+		$network_id = $current_network_id;
+	$network_id = (int) $network_id;
+
+	if ( defined( 'PRIMARY_NETWORK_ID' ) )
+		return $network_id === (int) PRIMARY_NETWORK_ID;
+
+	if ( 1 === $current_network_id )
+		return $network_id === $current_network_id;
+
+	$primary_network_id = (int) wp_cache_get( 'primary_network_id', 'site-options' );
+
+	if ( $primary_network_id )
+		return $network_id === $primary_network_id;
+
+	$primary_network_id = (int) $wpdb->get_var( "SELECT id FROM $wpdb->site ORDER BY id LIMIT 1" );
+	wp_cache_add( 'primary_network_id', $primary_network_id, 'site-options' );
+
+	return $network_id === $primary_network_id;
+}
+
+/**
+ * Whether global terms are enabled.
+ *
+ *
+ * @since 3.0.0
+ * @package WordPress
+ *
+ * @return bool True if multisite and global terms enabled
+ */
+function global_terms_enabled() {
+	if ( ! is_multisite() )
+		return false;
+
+	static $global_terms = null;
+	if ( is_null( $global_terms ) ) {
+		$filter = apply_filters( 'global_terms_enabled', null );
+		if ( ! is_null( $filter ) )
+			$global_terms = (bool) $filter;
+		else
+			$global_terms = (bool) get_site_option( 'global_terms_enabled', false );
+	}
+	return $global_terms;
+}
+
+/**
+ * gmt_offset modification for smart timezone handling.
+ *
+ * Overrides the gmt_offset option if we have a timezone_string available.
+ *
+ * @since 2.8.0
+ *
+ * @return float|bool
+ */
+function wp_timezone_override_offset() {
+	if ( !$timezone_string = get_option( 'timezone_string' ) ) {
+		return false;
+	}
+
+	$timezone_object = timezone_open( $timezone_string );
+	$datetime_object = date_create();
+	if ( false === $timezone_object || false === $datetime_object ) {
+		return false;
+	}
+	return round( timezone_offset_get( $timezone_object, $datetime_object ) / HOUR_IN_SECONDS, 2 );
+}
+
+/**
+ * Sort-helper for timezones.
+ *
+ * @since 2.9.0
+ *
+ * @param array $a
+ * @param array $b
+ * @return int
+ */
+function _wp_timezone_choice_usort_callback( $a, $b ) {
+	// Don't use translated versions of Etc
+	if ( 'Etc' === $a['continent'] && 'Etc' === $b['continent'] ) {
+		// Make the order of these more like the old dropdown
+		if ( 'GMT+' === substr( $a['city'], 0, 4 ) && 'GMT+' === substr( $b['city'], 0, 4 ) ) {
+			return -1 * ( strnatcasecmp( $a['city'], $b['city'] ) );
+		}
+		if ( 'UTC' === $a['city'] ) {
+			if ( 'GMT+' === substr( $b['city'], 0, 4 ) ) {
+				return 1;
+			}
+			return -1;
+		}
+		if ( 'UTC' === $b['city'] ) {
+			if ( 'GMT+' === substr( $a['city'], 0, 4 ) ) {
+				return -1;
+			}
+			return 1;
+		}
+		return strnatcasecmp( $a['city'], $b['city'] );
+	}
+	if ( $a['t_continent'] == $b['t_continent'] ) {
+		if ( $a['t_city'] == $b['t_city'] ) {
+			return strnatcasecmp( $a['t_subcity'], $b['t_subcity'] );
+		}
+		return strnatcasecmp( $a['t_city'], $b['t_city'] );
+	} else {
+		// Force Etc to the bottom of the list
+		if ( 'Etc' === $a['continent'] ) {
+			return 1;
+		}
+		if ( 'Etc' === $b['continent'] ) {
+			return -1;
+		}
+		return strnatcasecmp( $a['t_continent'], $b['t_continent'] );
+	}
+}
+
+/**
+ * Gives a nicely formatted list of timezone strings.
+ *
+ * @since 2.9.0
+ *
+ * @param string $selected_zone Selected Zone
+ * @return string
+ */
+function wp_timezone_choice( $selected_zone ) {
+	static $mo_loaded = false;
+
+	$continents = array( 'Africa', 'America', 'Antarctica', 'Arctic', 'Asia', 'Atlantic', 'Australia', 'Europe', 'Indian', 'Pacific');
+
+	// Load translations for continents and cities
+	if ( !$mo_loaded ) {
+		$locale = get_locale();
+		$mofile = WP_LANG_DIR . '/continents-cities-' . $locale . '.mo';
+		load_textdomain( 'continents-cities', $mofile );
+		$mo_loaded = true;
+	}
+
+	$zonen = array();
+	foreach ( timezone_identifiers_list() as $zone ) {
+		$zone = explode( '/', $zone );
+		if ( !in_array( $zone[0], $continents ) ) {
+			continue;
+		}
+
+		// This determines what gets set and translated - we don't translate Etc/* strings here, they are done later
+		$exists = array(
+			0 => ( isset( $zone[0] ) && $zone[0] ),
+			1 => ( isset( $zone[1] ) && $zone[1] ),
+			2 => ( isset( $zone[2] ) && $zone[2] ),
+		);
+		$exists[3] = ( $exists[0] && 'Etc' !== $zone[0] );
+		$exists[4] = ( $exists[1] && $exists[3] );
+		$exists[5] = ( $exists[2] && $exists[3] );
+
+		$zonen[] = array(
+			'continent'   => ( $exists[0] ? $zone[0] : '' ),
+			'city'        => ( $exists[1] ? $zone[1] : '' ),
+			'subcity'     => ( $exists[2] ? $zone[2] : '' ),
+			't_continent' => ( $exists[3] ? translate( str_replace( '_', ' ', $zone[0] ), 'continents-cities' ) : '' ),
+			't_city'      => ( $exists[4] ? translate( str_replace( '_', ' ', $zone[1] ), 'continents-cities' ) : '' ),
+			't_subcity'   => ( $exists[5] ? translate( str_replace( '_', ' ', $zone[2] ), 'continents-cities' ) : '' )
+		);
+	}
+	usort( $zonen, '_wp_timezone_choice_usort_callback' );
+
+	$structure = array();
+
+	if ( empty( $selected_zone ) ) {
+		$structure[] = '<option selected="selected" value="">' . __( 'Select a city' ) . '</option>';
+	}
+
+	foreach ( $zonen as $key => $zone ) {
+		// Build value in an array to join later
+		$value = array( $zone['continent'] );
+
+		if ( empty( $zone['city'] ) ) {
+			// It's at the continent level (generally won't happen)
+			$display = $zone['t_continent'];
+		} else {
+			// It's inside a continent group
+
+			// Continent optgroup
+			if ( !isset( $zonen[$key - 1] ) || $zonen[$key - 1]['continent'] !== $zone['continent'] ) {
+				$label = $zone['t_continent'];
+				$structure[] = '<optgroup label="'. esc_attr( $label ) .'">';
+			}
+
+			// Add the city to the value
+			$value[] = $zone['city'];
+
+			$display = $zone['t_city'];
+			if ( !empty( $zone['subcity'] ) ) {
+				// Add the subcity to the value
+				$value[] = $zone['subcity'];
+				$display .= ' - ' . $zone['t_subcity'];
+			}
+		}
+
+		// Build the value
+		$value = join( '/', $value );
+		$selected = '';
+		if ( $value === $selected_zone ) {
+			$selected = 'selected="selected" ';
+		}
+		$structure[] = '<option ' . $selected . 'value="' . esc_attr( $value ) . '">' . esc_html( $display ) . "</option>";
+
+		// Close continent optgroup
+		if ( !empty( $zone['city'] ) && ( !isset($zonen[$key + 1]) || (isset( $zonen[$key + 1] ) && $zonen[$key + 1]['continent'] !== $zone['continent']) ) ) {
+			$structure[] = '</optgroup>';
+		}
+	}
+
+	// Do UTC
+	$structure[] = '<optgroup label="'. esc_attr__( 'UTC' ) .'">';
+	$selected = '';
+	if ( 'UTC' === $selected_zone )
+		$selected = 'selected="selected" ';
+	$structure[] = '<option ' . $selected . 'value="' . esc_attr( 'UTC' ) . '">' . __('UTC') . '</option>';
+	$structure[] = '</optgroup>';
+
+	// Do manual UTC offsets
+	$structure[] = '<optgroup label="'. esc_attr__( 'Manual Offsets' ) .'">';
+	$offset_range = array (-12, -11.5, -11, -10.5, -10, -9.5, -9, -8.5, -8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5,
+		0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 5.75, 6, 6.5, 7, 7.5, 8, 8.5, 8.75, 9, 9.5, 10, 10.5, 11, 11.5, 12, 12.75, 13, 13.75, 14);
+	foreach ( $offset_range as $offset ) {
+		if ( 0 <= $offset )
+			$offset_name = '+' . $offset;
+		else
+			$offset_name = (string) $offset;
+
+		$offset_value = $offset_name;
+		$offset_name = str_replace(array('.25','.5','.75'), array(':15',':30',':45'), $offset_name);
+		$offset_name = 'UTC' . $offset_name;
+		$offset_value = 'UTC' . $offset_value;
+		$selected = '';
+		if ( $offset_value === $selected_zone )
+			$selected = 'selected="selected" ';
+		$structure[] = '<option ' . $selected . 'value="' . esc_attr( $offset_value ) . '">' . esc_html( $offset_name ) . "</option>";
+
+	}
+	$structure[] = '</optgroup>';
+
+	return join( "\n", $structure );
+}
+
+/**
+ * Strip close comment and close php tags from file headers used by WP.
+ * See http://core.trac.wordpress.org/ticket/8497
+ *
+ * @since 2.8.0
+ *
+ * @param string $str
+ * @return string
+ */
+function _cleanup_header_comment($str) {
+	return trim(preg_replace("/\s*(?:\*\/|\?>).*/", '', $str));
+}
+
+/**
+ * Permanently deletes posts, pages, attachments, and comments which have been in the trash for EMPTY_TRASH_DAYS.
+ *
+ * @since 2.9.0
+ */
+function wp_scheduled_delete() {
+	global $wpdb;
+
+	$delete_timestamp = time() - ( DAY_IN_SECONDS * EMPTY_TRASH_DAYS );
+
+	$posts_to_delete = $wpdb->get_results($wpdb->prepare("SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_wp_trash_meta_time' AND meta_value < '%d'", $delete_timestamp), ARRAY_A);
+
+	foreach ( (array) $posts_to_delete as $post ) {
+		$post_id = (int) $post['post_id'];
+		if ( !$post_id )
+			continue;
+
+		$del_post = get_post($post_id);
+
+		if ( !$del_post || 'trash' != $del_post->post_status ) {
+			delete_post_meta($post_id, '_wp_trash_meta_status');
+			delete_post_meta($post_id, '_wp_trash_meta_time');
+		} else {
+			wp_delete_post($post_id);
+		}
+	}
+
+	$comments_to_delete = $wpdb->get_results($wpdb->prepare("SELECT comment_id FROM $wpdb->commentmeta WHERE meta_key = '_wp_trash_meta_time' AND meta_value < '%d'", $delete_timestamp), ARRAY_A);
+
+	foreach ( (array) $comments_to_delete as $comment ) {
+		$comment_id = (int) $comment['comment_id'];
+		if ( !$comment_id )
+			continue;
+
+		$del_comment = get_comment($comment_id);
+
+		if ( !$del_comment || 'trash' != $del_comment->comment_approved ) {
+			delete_comment_meta($comment_id, '_wp_trash_meta_time');
+			delete_comment_meta($comment_id, '_wp_trash_meta_status');
+		} else {
+			wp_delete_comment($comment_id);
+		}
+	}
+}
+
+/**
+ * Retrieve metadata from a file.
+ *
+ * Searches for metadata in the first 8kiB of a file, such as a plugin or theme.
+ * Each piece of metadata must be on its own line. Fields can not span multiple
+ * lines, the value will get cut at the end of the first line.
+ *
+ * If the file data is not within that first 8kiB, then the author should correct
+ * their plugin file and move the data headers to the top.
+ *
+ * @see http://codex.wordpress.org/File_Header
+ *
+ * @since 2.9.0
+ * @param string $file Path to the file
+ * @param array $default_headers List of headers, in the format array('HeaderKey' => 'Header Name')
+ * @param string $context If specified adds filter hook "extra_{$context}_headers"
+ */
+function get_file_data( $file, $default_headers, $context = '' ) {
+	// We don't need to write to the file, so just open for reading.
+	$fp = fopen( $file, 'r' );
+
+	// Pull only the first 8kiB of the file in.
+	$file_data = fread( $fp, 8192 );
+
+	// PHP will close file handle, but we are good citizens.
+	fclose( $fp );
+
+	// Make sure we catch CR-only line endings.
+	$file_data = str_replace( "\r", "\n", $file_data );
+
+	if ( $context && $extra_headers = apply_filters( "extra_{$context}_headers", array() ) ) {
+		$extra_headers = array_combine( $extra_headers, $extra_headers ); // keys equal values
+		$all_headers = array_merge( $extra_headers, (array) $default_headers );
+	} else {
+		$all_headers = $default_headers;
+	}
+
+	foreach ( $all_headers as $field => $regex ) {
+		if ( preg_match( '/^[ \t\/*#@]*' . preg_quote( $regex, '/' ) . ':(.*)$/mi', $file_data, $match ) && $match[1] )
+			$all_headers[ $field ] = _cleanup_header_comment( $match[1] );
+		else
+			$all_headers[ $field ] = '';
+	}
+
+	return $all_headers;
+}
+
+/**
+ * Returns true.
+ *
+ * Useful for returning true to filters easily.
+ *
+ * @since 3.0.0
+ * @see __return_false()
+ * @return bool true
+ */
+function __return_true() {
+	return true;
+}
+
+/**
+ * Returns false.
+ *
+ * Useful for returning false to filters easily.
+ *
+ * @since 3.0.0
+ * @see __return_true()
+ * @return bool false
+ */
+function __return_false() {
+	return false;
+}
+
+/**
+ * Returns 0.
+ *
+ * Useful for returning 0 to filters easily.
+ *
+ * @since 3.0.0
+ * @return int 0
+ */
+function __return_zero() {
+	return 0;
+}
+
+/**
+ * Returns an empty array.
+ *
+ * Useful for returning an empty array to filters easily.
+ *
+ * @since 3.0.0
+ * @return array Empty array
+ */
+function __return_empty_array() {
+	return array();
+}
+
+/**
+ * Returns null.
+ *
+ * Useful for returning null to filters easily.
+ *
+ * @since 3.4.0
+ * @return null
+ */
+function __return_null() {
+	return null;
+}
+
+/**
+ * Returns an empty string.
+ *
+ * Useful for returning an empty string to filters easily.
+ *
+ * @since 3.7.0
+ * @see __return_null()
+ * @return string Empty string
+ */
+function __return_empty_string() {
+	return '';
+}
+
+/**
+ * Send a HTTP header to disable content type sniffing in browsers which support it.
+ *
+ * @link http://blogs.msdn.com/ie/archive/2008/07/02/ie8-security-part-v-comprehensive-protection.aspx
+ * @link http://src.chromium.org/viewvc/chrome?view=rev&revision=6985
+ *
+ * @since 3.0.0
+ * @return none
+ */
+function send_nosniff_header() {
+	@header( 'X-Content-Type-Options: nosniff' );
+}
+
+/**
+ * Returns a MySQL expression for selecting the week number based on the start_of_week option.
+ *
+ * @internal
+ * @since 3.0.0
+ * @param string $column
+ * @return string
+ */
+function _wp_mysql_week( $column ) {
+	switch ( $start_of_week = (int) get_option( 'start_of_week' ) ) {
+	default :
+	case 0 :
+		return "WEEK( $column, 0 )";
+	case 1 :
+		return "WEEK( $column, 1 )";
+	case 2 :
+	case 3 :
+	case 4 :
+	case 5 :
+	case 6 :
+		return "WEEK( DATE_SUB( $column, INTERVAL $start_of_week DAY ), 0 )";
+	}
+}
+
+/**
+ * Finds hierarchy loops using a callback function that maps object IDs to parent IDs.
+ *
+ * @since 3.1.0
+ * @access private
+ *
+ * @param callback $callback function that accepts ( ID, $callback_args ) and outputs parent_ID
+ * @param int $start The ID to start the loop check at
+ * @param int $start_parent the parent_ID of $start to use instead of calling $callback( $start ). Use null to always use $callback
+ * @param array $callback_args optional additional arguments to send to $callback
+ * @return array IDs of all members of loop
+ */
+function wp_find_hierarchy_loop( $callback, $start, $start_parent, $callback_args = array() ) {
+	$override = is_null( $start_parent ) ? array() : array( $start => $start_parent );
+
+	if ( !$arbitrary_loop_member = wp_find_hierarchy_loop_tortoise_hare( $callback, $start, $override, $callback_args ) )
+		return array();
+
+	return wp_find_hierarchy_loop_tortoise_hare( $callback, $arbitrary_loop_member, $override, $callback_args, true );
+}
+
+/**
+ * Uses the "The Tortoise and the Hare" algorithm to detect loops.
+ *
+ * For every step of the algorithm, the hare takes two steps and the tortoise one.
+ * If the hare ever laps the tortoise, there must be a loop.
+ *
+ * @since 3.1.0
+ * @access private
+ *
+ * @param callback $callback function that accepts ( ID, callback_arg, ... ) and outputs parent_ID
+ * @param int $start The ID to start the loop check at
+ * @param array $override an array of ( ID => parent_ID, ... ) to use instead of $callback
+ * @param array $callback_args optional additional arguments to send to $callback
+ * @param bool $_return_loop Return loop members or just detect presence of loop?
+ *             Only set to true if you already know the given $start is part of a loop
+ *             (otherwise the returned array might include branches)
+ * @return mixed scalar ID of some arbitrary member of the loop, or array of IDs of all members of loop if $_return_loop
+ */
+function wp_find_hierarchy_loop_tortoise_hare( $callback, $start, $override = array(), $callback_args = array(), $_return_loop = false ) {
+	$tortoise = $hare = $evanescent_hare = $start;
+	$return = array();
+
+	// Set evanescent_hare to one past hare
+	// Increment hare two steps
+	while (
+		$tortoise
+	&&
+		( $evanescent_hare = isset( $override[$hare] ) ? $override[$hare] : call_user_func_array( $callback, array_merge( array( $hare ), $callback_args ) ) )
+	&&
+		( $hare = isset( $override[$evanescent_hare] ) ? $override[$evanescent_hare] : call_user_func_array( $callback, array_merge( array( $evanescent_hare ), $callback_args ) ) )
+	) {
+		if ( $_return_loop )
+			$return[$tortoise] = $return[$evanescent_hare] = $return[$hare] = true;
+
+		// tortoise got lapped - must be a loop
+		if ( $tortoise == $evanescent_hare || $tortoise == $hare )
+			return $_return_loop ? $return : $tortoise;
+
+		// Increment tortoise by one step
+		$tortoise = isset( $override[$tortoise] ) ? $override[$tortoise] : call_user_func_array( $callback, array_merge( array( $tortoise ), $callback_args ) );
+	}
+
+	return false;
+}
+
+/**
+ * Send a HTTP header to limit rendering of pages to same origin iframes.
+ *
+ * @link https://developer.mozilla.org/en/the_x-frame-options_response_header
+ *
+ * @since 3.1.3
+ * @return none
+ */
+function send_frame_options_header() {
+	@header( 'X-Frame-Options: SAMEORIGIN' );
+}
+
+/**
+ * Retrieve a list of protocols to allow in HTML attributes.
+ *
+ * @since 3.3.0
+ * @see wp_kses()
+ * @see esc_url()
+ *
+ * @return array Array of allowed protocols
+ */
+function wp_allowed_protocols() {
+	static $protocols;
+
+	if ( empty( $protocols ) ) {
+		$protocols = array( 'http', 'https', 'ftp', 'ftps', 'mailto', 'news', 'irc', 'gopher', 'nntp', 'feed', 'telnet', 'mms', 'rtsp', 'svn', 'tel', 'fax', 'xmpp' );
+		$protocols = apply_filters( 'kses_allowed_protocols', $protocols );
+	}
+
+	return $protocols;
+}
+
+/**
+ * Return a comma separated string of functions that have been called to get to the current point in code.
+ *
+ * @link http://core.trac.wordpress.org/ticket/19589
+ * @since 3.4.0
+ *
+ * @param string $ignore_class A class to ignore all function calls within - useful when you want to just give info about the callee
+ * @param int $skip_frames A number of stack frames to skip - useful for unwinding back to the source of the issue
+ * @param bool $pretty Whether or not you want a comma separated string or raw array returned
+ * @return string|array Either a string containing a reversed comma separated trace or an array of individual calls.
+ */
+function wp_debug_backtrace_summary( $ignore_class = null, $skip_frames = 0, $pretty = true ) {
+	if ( version_compare( PHP_VERSION, '5.2.5', '>=' ) )
+		$trace = debug_backtrace( false );
+	else
+		$trace = debug_backtrace();
+
+	$caller = array();
+	$check_class = ! is_null( $ignore_class );
+	$skip_frames++; // skip this function
+
+	foreach ( $trace as $call ) {
+		if ( $skip_frames > 0 ) {
+			$skip_frames--;
+		} elseif ( isset( $call['class'] ) ) {
+			if ( $check_class && $ignore_class == $call['class'] )
+				continue; // Filter out calls
+
+			$caller[] = "{$call['class']}{$call['type']}{$call['function']}";
+		} else {
+			if ( in_array( $call['function'], array( 'do_action', 'apply_filters' ) ) ) {
+				$caller[] = "{$call['function']}('{$call['args'][0]}')";
+			} elseif ( in_array( $call['function'], array( 'include', 'include_once', 'require', 'require_once' ) ) ) {
+				$caller[] = $call['function'] . "('" . str_replace( array( WP_CONTENT_DIR, ABSPATH ) , '', $call['args'][0] ) . "')";
+			} else {
+				$caller[] = $call['function'];
+			}
+		}
+	}
+	if ( $pretty )
+		return join( ', ', array_reverse( $caller ) );
+	else
+		return $caller;
+}
+
+/**
+ * Retrieve ids that are not already present in the cache
+ *
+ * @since 3.4.0
+ *
+ * @param array $object_ids ID list
+ * @param string $cache_key The cache bucket to check against
+ *
+ * @return array
+ */
+function _get_non_cached_ids( $object_ids, $cache_key ) {
+	$clean = array();
+	foreach ( $object_ids as $id ) {
+		$id = (int) $id;
+		if ( !wp_cache_get( $id, $cache_key ) ) {
+			$clean[] = $id;
+		}
+	}
+
+	return $clean;
+}
+
+/**
+ * Test if the current device has the capability to upload files.
+ *
+ * @since 3.4.0
+ * @access private
+ *
+ * @return bool true|false
+ */
+function _device_can_upload() {
+	if ( ! wp_is_mobile() )
+		return true;
+
+	$ua = $_SERVER['HTTP_USER_AGENT'];
+
+	if ( strpos($ua, 'iPhone') !== false
+		|| strpos($ua, 'iPad') !== false
+		|| strpos($ua, 'iPod') !== false ) {
+			return preg_match( '#OS ([\d_]+) like Mac OS X#', $ua, $version ) && version_compare( $version[1], '6', '>=' );
+	}
+
+	return true;
+}
+
+/**
+ * Test if a given path is a stream URL
+ *
+ * @param string $path The resource path or URL
+ * @return bool True if the path is a stream URL
+ */
+function wp_is_stream( $path ) {
+	$wrappers = stream_get_wrappers();
+	$wrappers_re = '(' . join('|', $wrappers) . ')';
+
+	return preg_match( "!^$wrappers_re://!", $path ) === 1;
+}
+
+/**
+ * Test if the supplied date is valid for the Gregorian calendar
+ *
+ * @since 3.5.0
+ *
+ * @return bool true|false
+ */
+function wp_checkdate( $month, $day, $year, $source_date ) {
+	return apply_filters( 'wp_checkdate', checkdate( $month, $day, $year ), $source_date );
+}
+
+/**
+ * Load the auth check for monitoring whether the user is still logged in.
+ *
+ * Can be disabled with remove_action( 'admin_enqueue_scripts', 'wp_auth_check_load' );
+ *
+ * This is disabled for certain screens where a login screen could cause an
+ * inconvenient interruption. A filter called wp_auth_check_load can be used
+ * for fine-grained control.
+ *
+ * @since 3.6.0
+ */
+function wp_auth_check_load() {
+	if ( ! is_admin() && ! is_user_logged_in() )
+		return;
+
+	if ( defined( 'IFRAME_REQUEST' ) )
+		return;
+
+	$screen = get_current_screen();
+	$hidden = array( 'update', 'update-network', 'update-core', 'update-core-network', 'upgrade', 'upgrade-network', 'network' );
+	$show = ! in_array( $screen->id, $hidden );
+
+	if ( apply_filters( 'wp_auth_check_load', $show, $screen ) ) {
+		wp_enqueue_style( 'wp-auth-check' );
+		wp_enqueue_script( 'wp-auth-check' );
+
+		add_action( 'admin_print_footer_scripts', 'wp_auth_check_html', 5 );
+		add_action( 'wp_print_footer_scripts', 'wp_auth_check_html', 5 );
+	}
+}
+
+/**
+ * Output the HTML that shows the wp-login dialog when the user is no longer logged in.
+ *
+ * @since 3.6.0
+ */
+function wp_auth_check_html() {
+	$login_url = wp_login_url();
+	$current_domain = ( is_ssl() ? 'https://' : 'http://' ) . $_SERVER['HTTP_HOST'];
+	$same_domain = ( strpos( $login_url, $current_domain ) === 0 );
+
+	if ( $same_domain && force_ssl_login() && ! force_ssl_admin() )
+		$same_domain = false;
+
+	// Let plugins change this if they know better.
+	$same_domain = apply_filters( 'wp_auth_check_same_domain', $same_domain );
+	$wrap_class = $same_domain ? 'hidden' : 'hidden fallback';
+
+	?>
+	<div id="wp-auth-check-wrap" class="<?php echo $wrap_class; ?>">
+	<div id="wp-auth-check-bg"></div>
+	<div id="wp-auth-check">
+	<div class="wp-auth-check-close" tabindex="0" title="<?php esc_attr_e('Close'); ?>"></div>
+	<?php
+
+	if ( $same_domain ) {
+		?>
+		<div id="wp-auth-check-form" data-src="<?php echo esc_url( add_query_arg( array( 'interim-login' => 1 ), $login_url ) ); ?>"></div>
+		<?php
+	}
+
+	?>
+	<div class="wp-auth-fallback">
+		<p><b class="wp-auth-fallback-expired" tabindex="0"><?php _e('Session expired'); ?></b></p>
+		<p><a href="<?php echo esc_url( $login_url ); ?>" target="_blank"><?php _e('Please log in again.'); ?></a>
+		<?php _e('The login page will open in a new window. After logging in you can close it and return to this page.'); ?></p>
+	</div>
+	</div>
+	</div>
+	<?php
+}
+
+/**
+ * Check whether a user is still logged in, for the heartbeat.
+ *
+ * Send a result that shows a log-in box if the user is no longer logged in,
+ * or if their cookie is within the grace period.
+ *
+ * @since 3.6.0
+ */
+function wp_auth_check( $response, $data ) {
+	$response['wp-auth-check'] = is_user_logged_in() && empty( $GLOBALS['login_grace_period'] );
+	return $response;
+}
+
+/**
+ * Return RegEx body to liberally match an opening HTML tag that:
+ * 1. Is self-closing or
+ * 2. Has no body but has a closing tag of the same name or
+ * 3. Contains a body and a closing tag of the same name
+ *
+ * Note: this RegEx does not balance inner tags and does not attempt to produce valid HTML
+ *
+ * @since 3.6.0
+ *
+ * @param string $tag An HTML tag name. Example: 'video'
+ * @return string
+ */
+function get_tag_regex( $tag ) {
+	if ( empty( $tag ) )
+		return;
+	return sprintf( '<%1$s[^<]*(?:>[\s\S]*<\/%1$s>|\s*\/>)', tag_escape( $tag ) );
+}
+
+/**
+ * Return a canonical form of the provided charset appropriate for passing to PHP
+ * functions such as htmlspecialchars() and charset html attributes.
+ *
+ * @link http://core.trac.wordpress.org/ticket/23688
+ * @since 3.6.0
+ *
+ * @param string A charset name
+ * @return string The canonical form of the charset
+ */
+function _canonical_charset( $charset ) {
+	if ( 'UTF-8' === $charset || 'utf-8' === $charset || 'utf8' === $charset ||
+		'UTF8' === $charset )
+		return 'UTF-8';
+
+	if ( 'ISO-8859-1' === $charset || 'iso-8859-1' === $charset ||
+		'iso8859-1' === $charset || 'ISO8859-1' === $charset )
+		return 'ISO-8859-1';
+
+	return $charset;
+}
+
+/**
+ * Sets the mbstring internal encoding to a binary safe encoding whne func_overload is enabled.
+ *
+ * When mbstring.func_overload is in use for multi-byte encodings, the results from strlen() and
+ * similar functions respect the utf8 characters, causing binary data to return incorrect lengths.
+ *
+ * This function overrides the mbstring encoding to a binary-safe encoding, and resets it to the
+ * users expected encoding afterwards through the `reset_mbstring_encoding` function.
+ *
+ * It is safe to recursively call this function, however each `mbstring_binary_safe_encoding()`
+ * call must be followed up with an equal number of `reset_mbstring_encoding()` calls.
+ *
+ * @see reset_mbstring_encoding()
+ *
+ * @since 3.7.0
+ *
+ * @param bool $reset Whether to reset the encoding back to a previously-set encoding.
+ */
+function mbstring_binary_safe_encoding( $reset = false ) {
+	static $encodings = array();
+	static $overloaded = null;
+
+	if ( is_null( $overloaded ) )
+		$overloaded = function_exists( 'mb_internal_encoding' ) && ( ini_get( 'mbstring.func_overload' ) & 2 );
+
+	if ( false === $overloaded )
+		return;
+
+	if ( ! $reset ) {
+		$encoding = mb_internal_encoding();
+		array_push( $encodings, $encoding );
+		mb_internal_encoding( 'ISO-8859-1' );
+	}
+
+	if ( $reset && $encodings ) {
+		$encoding = array_pop( $encodings );
+		mb_internal_encoding( $encoding );
+	}
+}
+
+/**
+ * Resets the mbstring internal encoding to a users previously set encoding.
+ *
+ * @see mbstring_binary_safe_encoding()
+ *
+ * @since 3.7.0
+ */
+function reset_mbstring_encoding() {
+	mbstring_binary_safe_encoding( true );
+}
