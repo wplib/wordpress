@@ -2062,7 +2062,7 @@ class wpdb {
 	public function get_var( $query = null, $x = 0, $y = 0 ) {
 		$this->func_call = "\$db->get_var(\"$query\", $x, $y)";
 
-		if ( $this->check_safe_collation( $query ) ) {
+		if ( $this->check_current_query && $this->check_safe_collation( $query ) ) {
 			$this->check_current_query = false;
 		}
 
@@ -2095,7 +2095,7 @@ class wpdb {
 	public function get_row( $query = null, $output = OBJECT, $y = 0 ) {
 		$this->func_call = "\$db->get_row(\"$query\",$output,$y)";
 
-		if ( $this->check_safe_collation( $query ) ) {
+		if ( $this->check_current_query && $this->check_safe_collation( $query ) ) {
 			$this->check_current_query = false;
 		}
 
@@ -2136,7 +2136,7 @@ class wpdb {
 	 * @return array Database query result. Array indexed from 0 by SQL result row number.
 	 */
 	public function get_col( $query = null , $x = 0 ) {
-		if ( $this->check_safe_collation( $query ) ) {
+		if ( $this->check_current_query && $this->check_safe_collation( $query ) ) {
 			$this->check_current_query = false;
 		}
 
@@ -2168,7 +2168,7 @@ class wpdb {
 	public function get_results( $query = null, $output = OBJECT ) {
 		$this->func_call = "\$db->get_results(\"$query\", $output)";
 
-		if ( $this->check_safe_collation( $query ) ) {
+		if ( $this->check_current_query && $this->check_safe_collation( $query ) ) {
 			$this->check_current_query = false;
 		}
 
@@ -2570,8 +2570,13 @@ class wpdb {
 
 			if ( is_array( $value['length'] ) ) {
 				$length = $value['length']['length'];
+				$truncate_by_byte_length = 'byte' === $value['length']['type'];
 			} else {
 				$length = false;
+				// Since we have no length, we'll never truncate.
+				// Initialize the variable to false. true would take us
+				// through an unnecessary (for this case) codepath below.
+				$truncate_by_byte_length = false;
 			}
 
 			// There's no charset to work with.
@@ -2583,8 +2588,6 @@ class wpdb {
 			if ( ! is_string( $value['value'] ) ) {
 				continue;
 			}
-
-			$truncate_by_byte_length = 'byte' === $value['length']['type'];
 
 			$needs_validation = true;
 			if (
@@ -2659,7 +2662,12 @@ class wpdb {
 						$charset = $value['charset'];
 					}
 
-					$queries[ $col ] = $this->prepare( "CONVERT( LEFT( CONVERT( %s USING $charset ), %.0f ) USING {$this->charset} )", $value['value'], $value['length']['length'] );
+					if ( is_array( $value['length'] ) ) {
+						$queries[ $col ] = $this->prepare( "CONVERT( LEFT( CONVERT( %s USING $charset ), %.0f ) USING {$this->charset} )", $value['value'], $value['length']['length'] );
+					} else if ( 'binary' !== $charset ) {
+						// If we don't have a length, there's no need to convert binary - it will always return the same result.
+						$queries[ $col ] = $this->prepare( "CONVERT( CONVERT( %s USING $charset ) USING {$this->charset} )", $value['value'] );
+					}
 
 					unset( $data[ $col ]['db'] );
 				}
@@ -2681,7 +2689,9 @@ class wpdb {
 			}
 
 			foreach ( array_keys( $data ) as $column ) {
-				$data[ $column ]['value'] = $row["x_$column"];
+				if ( isset( $row["x_$column"] ) ) {
+					$data[ $column ]['value'] = $row["x_$column"];
+				}
 			}
 		}
 
