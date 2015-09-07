@@ -68,8 +68,10 @@
 		params = params || {};
 		focus = function () {
 			var focusContainer;
-			if ( construct.expanded && construct.expanded() ) {
-				focusContainer = construct.container.find( 'ul:first' );
+			if ( construct.extended( api.Panel ) && construct.expanded && construct.expanded() ) {
+				focusContainer = construct.container.find( 'ul.control-panel-content' );
+			} else if ( construct.extended( api.Section ) && construct.expanded && construct.expanded() ) {
+				focusContainer = construct.container.find( 'ul.accordion-section-content' );
 			} else {
 				focusContainer = construct.container;
 			}
@@ -284,8 +286,15 @@
 		 * @param {Object}  args.duration
 		 * @param {Object}  args.completeCallback
 		 */
-		onChangeActive: function ( active, args ) {
+		onChangeActive: function( active, args ) {
 			var duration, construct = this;
+			if ( args.unchanged ) {
+				if ( args.completeCallback ) {
+					args.completeCallback();
+				}
+				return;
+			}
+
 			duration = ( 'resolved' === api.previewer.deferred.active.state() ? args.duration : 0 );
 			if ( ! $.contains( document, construct.container[0] ) ) {
 				// jQuery.fn.slideUp is not hiding an element if it is not in the DOM
@@ -1497,6 +1506,13 @@
 		 * @param {Callback} args.completeCallback
 		 */
 		onChangeActive: function ( active, args ) {
+			if ( args.unchanged ) {
+				if ( args.completeCallback ) {
+					args.completeCallback();
+				}
+				return;
+			}
+
 			if ( ! $.contains( document, this.container ) ) {
 				// jQuery.fn.slideUp is not hiding an element if it is not in the DOM
 				this.container.toggle( active );
