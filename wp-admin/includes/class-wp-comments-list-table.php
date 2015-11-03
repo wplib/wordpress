@@ -249,7 +249,7 @@ class WP_Comments_List_Table extends WP_List_Table {
 		if ( !EMPTY_TRASH_DAYS )
 			unset($stati['trash']);
 
-		$link = admin_url( 'edit-comments.php' );
+		$link = 'edit-comments.php';
 		if ( !empty($comment_type) && 'all' != $comment_type )
 			$link = add_query_arg( 'comment_type', $comment_type, $link );
 
@@ -508,8 +508,6 @@ class WP_Comments_List_Table extends WP_List_Table {
  	 * @since 4.3.0
  	 * @access protected
  	 *
- 	 * @global string $comment_status Status for the current listed comments.
- 	 *
  	 * @param object $comment     Comment being acted upon.
  	 * @param string $column_name Current column name.
  	 * @param string $primary     Primary column name.
@@ -701,7 +699,7 @@ class WP_Comments_List_Table extends WP_List_Table {
 
 			$author_ip = get_comment_author_IP( $comment );
 			if ( $author_ip ) {
-				$author_ip_url = add_query_arg( array( 's' => $author_ip, 'mode' => 'detail' ), admin_url( 'edit-comments.php' ) );
+				$author_ip_url = add_query_arg( array( 's' => $author_ip, 'mode' => 'detail' ), 'edit-comments.php' );
 				if ( 'spam' === $comment_status ) {
 					$author_ip_url = add_query_arg( 'comment_status', 'spam', $author_ip_url );
 				}

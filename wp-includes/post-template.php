@@ -429,9 +429,6 @@ function get_post_class( $class = '', $post_id = null ) {
 			$class = preg_split( '#\s+#', $class );
 		}
 		$classes = array_map( 'esc_attr', $class );
-	} else {
-		// Ensure that we always coerce class to being an array.
-		$class = array();
 	}
 
 	if ( ! $post ) {
@@ -511,9 +508,9 @@ function get_post_class( $class = '', $post_id = null ) {
 	 *
 	 * @since 2.7.0
 	 *
-	 * @param array $classes An array of post classes.
-	 * @param array $class   An array of additional classes added to the post.
-	 * @param int   $post_id The post ID.
+	 * @param array  $classes An array of post classes.
+	 * @param string $class   A comma-separated list of additional classes added to the post.
+	 * @param int    $post_id The post ID.
 	 */
 	$classes = apply_filters( 'post_class', $classes, $class, $post->ID );
 
@@ -731,8 +728,8 @@ function get_body_class( $class = '' ) {
 	 *
 	 * @since 2.8.0
 	 *
-	 * @param array $classes An array of body classes.
-	 * @param array $class   An array of additional classes added to the body.
+	 * @param array  $classes An array of body classes.
+	 * @param string $class   A comma-separated list of additional classes added to the body.
 	 */
 	$classes = apply_filters( 'body_class', $classes, $class );
 

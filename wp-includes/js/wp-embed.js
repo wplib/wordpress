@@ -1,9 +1,6 @@
 (function ( window, document ) {
 	'use strict';
 
-	var supportedBrowser = ( document.querySelector && window.addEventListener ),
-		loaded = false;
-
 	window.wp = window.wp || {};
 
 	if ( !! window.wp.receiveEmbedMessage ) {
@@ -16,36 +13,26 @@
 			return;
 		}
 
-		var iframes = document.querySelectorAll( 'iframe[data-secret="' + data.secret + '"]' ),
-			blockquotes = document.querySelectorAll( 'blockquote[data-secret="' + data.secret + '"]' ),
-			i, source, height, sourceURL, targetURL;
+		var iframes = document.querySelectorAll( '.wp-embedded-content[data-secret="' + data.secret + '"]' );
 
-		for ( i = 0; i < blockquotes.length; i++ ) {
-			blockquotes[ i ].style.display = 'none';
-		}
-
-		for ( i = 0; i < iframes.length; i++ ) {
-			source = iframes[ i ];
-
-			source.style.display = '';
+		for ( var i = 0; i < iframes.length; i++ ) {
+			var source = iframes[ i ];
 
 			/* Resize the iframe on request. */
 			if ( 'height' === data.message ) {
-				height = parseInt( data.value, 10 );
+				var height = data.value;
 				if ( height > 1000 ) {
 					height = 1000;
-				} else if ( ~~height < 200 ) {
+				} else if ( height < 200 ) {
 					height = 200;
 				}
 
-				source.height = height;
+				source.height = (height) + 'px';
 			}
 
 			/* Link to a specific URL on request. */
 			if ( 'link' === data.message ) {
-				sourceURL = document.createElement( 'a' );
-				targetURL = document.createElement( 'a' );
-
+				var sourceURL = document.createElement( 'a' ), targetURL = document.createElement( 'a' );
 				sourceURL.href = source.getAttribute( 'src' );
 				targetURL.href = data.value;
 
@@ -57,31 +44,24 @@
 		}
 	};
 
-	function onLoad() {
-		if ( loaded ) {
-			return;
-		}
-		loaded = true;
+	window.addEventListener( 'message', window.wp.receiveEmbedMessage, false );
 
+	function onLoad() {
 		var isIE10 = -1 !== navigator.appVersion.indexOf( 'MSIE 10' ),
-			isIE11 = !!navigator.userAgent.match( /Trident.*rv\:11\./ ),
-			iframes, iframeClone, i;
+			isIE11 = !!navigator.userAgent.match( /Trident.*rv\:11\./ );
 
 		/* Remove security attribute from iframes in IE10 and IE11. */
 		if ( isIE10 || isIE11 ) {
-			iframes = document.querySelectorAll( '.wp-embedded-content[security]' );
+			var iframes = document.querySelectorAll( '.wp-embedded-content[security]' ), iframeClone;
 
-			for ( i = 0; i < iframes.length; i++ ) {
+			for ( var i = 0; i < iframes.length; i++ ) {
 				iframeClone = iframes[ i ].cloneNode( true );
 				iframeClone.removeAttribute( 'security' );
-				iframes[ i ].parentNode.replaceChild( iframeClone, iframes[ i ] );
+				iframes[ i ].parentNode.insertBefore( iframeClone, iframes[ i ].nextSibling );
+				iframes[ i ].parentNode.removeChild( iframes[ i ] );
 			}
 		}
 	}
 
-	if ( supportedBrowser ) {
-		window.addEventListener( 'message', window.wp.receiveEmbedMessage, false );
-		document.addEventListener( 'DOMContentLoaded', onLoad, false );
-		window.addEventListener( 'load', onLoad, false );
-	}
+	document.addEventListener( 'DOMContentLoaded', onLoad, false );
 })( window, document );

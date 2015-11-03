@@ -41,11 +41,9 @@
  */
 function random_bytes($bytes)
 {
-    try {
-        $bytes = RandomCompat_intval($bytes);
-    } catch (TypeError $ex) {
+    if (!is_int($bytes)) {
         throw new TypeError(
-            'random_bytes(): $bytes must be an integer'
+            'Length must be an integer'
         );
     }
     if ($bytes < 1) {

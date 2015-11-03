@@ -74,11 +74,9 @@ function random_bytes($bytes)
             stream_set_read_buffer($fp, RANDOM_COMPAT_READ_BUFFER);
         }
     }
-    try {
-        $bytes = RandomCompat_intval($bytes);
-    } catch (TypeError $ex) {
+    if (!is_int($bytes)) {
         throw new TypeError(
-            'random_bytes(): $bytes must be an integer'
+            'Length must be an integer'
         );
     }
     if ($bytes < 1) {

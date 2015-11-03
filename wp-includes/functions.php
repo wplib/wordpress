@@ -831,7 +831,6 @@ function wp_removable_query_args() {
 		'untrashed',
 		'update',
 		'updated',
-		'wp-post-new-reload',
 	);
 
 	/**
@@ -2557,9 +2556,9 @@ function _default_wp_die_handler( $message, $title = '', $args = array() ) {
 		}
 		a {
 			color: #0073aa;
+			text-decoration: none;
 		}
-		a:hover,
-		a:active {
+		a:hover {
 			color: #00a0d2;
 		}
 		a:focus {
@@ -2611,9 +2610,12 @@ function _default_wp_die_handler( $message, $title = '', $args = array() ) {
 		}
 
 		.button:focus  {
-			border-color: #5b9dd9;
-			-webkit-box-shadow: 0 0 3px rgba( 0, 115, 170, .8 );
-			box-shadow: 0 0 3px rgba( 0, 115, 170, .8 );
+			-webkit-box-shadow:
+				0 0 0 1px #5b9dd9,
+				0 0 2px 1px rgba(0, 115, 170, .8);
+			box-shadow:
+				0 0 0 1px #5b9dd9,
+				0 0 2px 1px rgba(0, 115, 170, .8);
 			outline: none;
 		}
 

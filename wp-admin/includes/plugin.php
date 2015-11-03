@@ -1052,14 +1052,10 @@ function add_menu_page( $page_title, $menu_title, $capability, $menu_slug, $func
 
 	$new_menu = array( $menu_title, $capability, $menu_slug, $page_title, 'menu-top ' . $icon_class . $hookname, $hookname, $icon_url );
 
-	if ( null === $position ) {
+	if ( null === $position )
 		$menu[] = $new_menu;
-	} elseif ( isset( $menu[ "$position" ] ) ) {
-	 	$position = $position + substr( base_convert( md5( $menu_slug . $menu_title ), 16, 10 ) , -5 ) * 0.00001;
-		$menu[ "$position" ] = $new_menu;
-	} else {
-		$menu[ $position ] = $new_menu;
-	}
+	else
+		$menu[$position] = $new_menu;
 
 	$_registered_pages[$hookname] = true;
 
@@ -1200,7 +1196,7 @@ function add_submenu_page( $parent_slug, $page_title, $menu_title, $capability, 
 }
 
 /**
- * Add sub menu page to the Tools main menu.
+ * Add sub menu page to the tools main menu.
  *
  * This function takes a capability which will be used to determine whether
  * or not a page is included in the menu.
@@ -1221,7 +1217,7 @@ function add_management_page( $page_title, $menu_title, $capability, $menu_slug,
 }
 
 /**
- * Add sub menu page to the Settings main menu.
+ * Add sub menu page to the options main menu.
  *
  * This function takes a capability which will be used to determine whether
  * or not a page is included in the menu.
@@ -1242,7 +1238,7 @@ function add_options_page( $page_title, $menu_title, $capability, $menu_slug, $f
 }
 
 /**
- * Add sub menu page to the Appearance main menu.
+ * Add sub menu page to the themes main menu.
  *
  * This function takes a capability which will be used to determine whether
  * or not a page is included in the menu.
@@ -1263,7 +1259,7 @@ function add_theme_page( $page_title, $menu_title, $capability, $menu_slug, $fun
 }
 
 /**
- * Add sub menu page to the Plugins main menu.
+ * Add sub menu page to the plugins main menu.
  *
  * This function takes a capability which will be used to determine whether
  * or not a page is included in the menu.
@@ -1329,7 +1325,7 @@ function add_dashboard_page( $page_title, $menu_title, $capability, $menu_slug, 
 }
 
 /**
- * Add sub menu page to the Posts main menu.
+ * Add sub menu page to the posts main menu.
  *
  * This function takes a capability which will be used to determine whether
  * or not a page is included in the menu.
@@ -1350,7 +1346,7 @@ function add_posts_page( $page_title, $menu_title, $capability, $menu_slug, $fun
 }
 
 /**
- * Add sub menu page to the Media main menu.
+ * Add sub menu page to the media main menu.
  *
  * This function takes a capability which will be used to determine whether
  * or not a page is included in the menu.
@@ -1371,7 +1367,7 @@ function add_media_page( $page_title, $menu_title, $capability, $menu_slug, $fun
 }
 
 /**
- * Add sub menu page to the Links main menu.
+ * Add sub menu page to the links main menu.
  *
  * This function takes a capability which will be used to determine whether
  * or not a page is included in the menu.
@@ -1392,7 +1388,7 @@ function add_links_page( $page_title, $menu_title, $capability, $menu_slug, $fun
 }
 
 /**
- * Add sub menu page to the Pages main menu.
+ * Add sub menu page to the pages main menu.
  *
  * This function takes a capability which will be used to determine whether
  * or not a page is included in the menu.
@@ -1413,7 +1409,7 @@ function add_pages_page( $page_title, $menu_title, $capability, $menu_slug, $fun
 }
 
 /**
- * Add sub menu page to the Comments main menu.
+ * Add sub menu page to the comments main menu.
  *
  * This function takes a capability which will be used to determine whether
  * or not a page is included in the menu.

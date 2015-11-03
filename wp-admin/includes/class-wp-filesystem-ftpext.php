@@ -520,9 +520,8 @@ class WP_Filesystem_FTPext extends WP_Filesystem_Base {
 		}
 
 		// Replace symlinks formatted as "source -> target" with just the source name
-		if ( isset( $b['islink'] ) && $b['islink'] ) {
+		if ( $b['islink'] )
 			$b['name'] = preg_replace( '/(\s*->\s*.*)$/', '', $b['name'] );
-		}
 
 		return $b;
 	}

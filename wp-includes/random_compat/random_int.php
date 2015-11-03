@@ -40,34 +40,21 @@ function random_int($min, $max)
 {
     /**
      * Type and input logic checks
-     * 
-     * If you pass it a float in the range (~PHP_INT_MAX, PHP_INT_MAX)
-     * (non-inclusive), it will sanely cast it to an int. If you it's equal to
-     * ~PHP_INT_MAX or PHP_INT_MAX, we let it fail as not an integer. Floats 
-     * lose precision, so the <= and => operators might accidentally let a float
-     * through.
      */
-    
-    try {
-        $min = RandomCompat_intval($min);
-    } catch (TypeError $ex) {
+    if (!is_numeric($min)) {
         throw new TypeError(
             'random_int(): $min must be an integer'
         );
     }
-    try {
-        $max = RandomCompat_intval($max);
-    } catch (TypeError $ex) {
+    if (!is_numeric($max)) {
         throw new TypeError(
             'random_int(): $max must be an integer'
         );
     }
-    
-    /**
-     * Now that we've verified our weak typing system has given us an integer,
-     * let's validate the logic then we can move forward with generating random
-     * integers along a given range.
-     */
+
+    $min = (int) $min;
+    $max = (int) $max;
+
     if ($min > $max) {
         throw new Error(
             'Minimum value must be less than or equal to the maximum value'
@@ -177,7 +164,7 @@ function random_int($min, $max)
         /**
          * If $val overflows to a floating point number,
          * ... or is larger than $max,
-         * ... or smaller than $min,
+         * ... or smaller than $int,
          * then try again.
          */
     } while (!is_int($val) || $val > $max || $val < $min);

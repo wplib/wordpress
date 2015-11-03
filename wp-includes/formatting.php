@@ -3398,7 +3398,7 @@ function esc_url( $url, $protocols = null, $_context = 'display' ) {
 
 	if ( ( false !== strpos( $url, '[' ) ) || ( false !== strpos( $url, ']' ) ) ) {
 
-		$parsed = wp_parse_url( $url );
+		$parsed = parse_url( $url );
 		$front  = '';
 
 		if ( isset( $parsed['scheme'] ) ) {
@@ -3662,8 +3662,6 @@ function sanitize_option( $option, $value ) {
 		case 'thumbnail_size_h':
 		case 'medium_size_w':
 		case 'medium_size_h':
-		case 'medium_large_size_w':
-		case 'medium_large_size_h':
 		case 'large_size_w':
 		case 'large_size_h':
 		case 'mailserver_port':

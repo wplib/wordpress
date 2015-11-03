@@ -2,8 +2,6 @@
 	'use strict';
 
 	var secret = window.location.hash.replace( /.*secret=([\d\w]{10}).*/, '$1' ),
-		supportedBrowser = ( document.querySelector && window.addEventListener ),
-		loaded = false,
 		resizing;
 
 	function sendEmbedMessage( message, value ) {
@@ -15,11 +13,6 @@
 	}
 
 	function onLoad() {
-		if ( loaded ) {
-			return;
-		}
-		loaded = true;
-
 		var share_dialog = document.querySelector( '.wp-embed-share-dialog' ),
 			share_dialog_open = document.querySelector( '.wp-embed-share-dialog-open' ),
 			share_dialog_close = document.querySelector( '.wp-embed-share-dialog-close' ),
@@ -38,8 +31,7 @@
 
 		function openSharingDialog() {
 			share_dialog.className = share_dialog.className.replace( 'hidden', '' );
-			// Initial focus should go on the currently selected tab in the dialog.
-			document.querySelector( '.wp-embed-share-tab-button [aria-selected="true"]' ).focus();
+			share_input[ 0 ].select();
 		}
 
 		function closeSharingDialog() {
@@ -48,14 +40,16 @@
 		}
 
 		if ( share_dialog_open ) {
-			share_dialog_open.addEventListener( 'click', function () {
+			share_dialog_open.addEventListener( 'click', function ( e ) {
 				openSharingDialog();
+				e.preventDefault();
 			} );
 		}
 
 		if ( share_dialog_close ) {
-			share_dialog_close.addEventListener( 'click', function () {
+			share_dialog_close.addEventListener( 'click', function ( e ) {
 				closeSharingDialog();
+				e.preventDefault();
 			} );
 		}
 
@@ -109,25 +103,10 @@
 		}
 
 		document.addEventListener( 'keydown', function ( e ) {
-			if ( 27 === e.keyCode && -1 === share_dialog.className.indexOf( 'hidden' ) ) {
+			if ( e.keyCode === 27 && -1 === share_dialog.className.indexOf( 'hidden' ) ) {
 				closeSharingDialog();
-			} else if ( 9 === e.keyCode ) {
-				constrainTabbing( e );
 			}
 		}, false );
-
-		function constrainTabbing( e ) {
-			// Need to re-get the selected tab each time.
-			var firstFocusable = document.querySelector( '.wp-embed-share-tab-button [aria-selected="true"]' );
-
-			if ( share_dialog_close === e.target && ! e.shiftKey ) {
-				firstFocusable.focus();
-				e.preventDefault();
-			} else if ( firstFocusable === e.target && e.shiftKey ) {
-				share_dialog_close.focus();
-				e.preventDefault();
-			}
-		}
 
 		if ( window.self === window.top ) {
 			return;
@@ -162,6 +141,8 @@
 		}
 	}
 
+	document.addEventListener( 'DOMContentLoaded', onLoad, false );
+
 	/**
 	 * Iframe resize handler.
 	 */
@@ -177,10 +158,5 @@
 		}, 100 );
 	}
 
-	if ( supportedBrowser ) {
-		document.documentElement.className = document.documentElement.className.replace( /\bno-js\b/, '' ) + ' js';
-		document.addEventListener( 'DOMContentLoaded', onLoad, false );
-		window.addEventListener( 'load', onLoad, false );
-		window.addEventListener( 'resize', onResize, false );
-	}
+	window.addEventListener( 'resize', onResize, false );
 })( window, document );

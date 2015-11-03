@@ -147,7 +147,7 @@ final class _WP_Editors {
 		$editor_class = ' class="' . trim( esc_attr( $set['editor_class'] ) . ' wp-editor-area' ) . '"';
 		$tabindex = $set['tabindex'] ? ' tabindex="' . (int) $set['tabindex'] . '"' : '';
 		$default_editor = 'html';
-		$buttons = $autocomplete = '';
+		$toolbar = $buttons = $autocomplete = '';
 		$editor_id_attr = esc_attr( $editor_id );
 
 		if ( $set['drag_drop_upload'] ) {
@@ -402,7 +402,7 @@ final class _WP_Editors {
 						'wpdialogs',
 						'wptextpattern',
 						'wpview',
-						'wpembed',
+						'wpoembed',
 					);
 
 					if ( ! self::$has_medialib ) {
