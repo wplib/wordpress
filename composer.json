@@ -1,6 +1,6 @@
 {
-	"name": "johnpbloch/wordpress",
-	"description": "WordPress is web software you can use to create a beautiful website or blog.",
+	"name": "wplib/wordpress",
+	"description": "WordPress is the world's leading open-source content management system for the web.",
 	"keywords": ["wordpress", "blog", "cms"],
 	"type": "wordpress-core",
 	"homepage": "http://wordpress.org/",
