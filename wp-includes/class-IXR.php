@@ -201,6 +201,7 @@ class IXR_Message
     var $_value;
     var $_currentTag;
     var $_currentTagContents;
+    var $_valueHasType = false;
     // The XML parser
     var $_parser;
 
@@ -270,16 +271,16 @@ class IXR_Message
         xml_set_character_data_handler($this->_parser, 'cdata');
 
         // 256Kb, parse in chunks to avoid the RAM usage on very large messages
-        $xmlrpc_memory_limit = 262144;
+        $chunk_size = 262144;
 
         /**
          * Filter the chunk size that can be used to parse an XML-RPC reponse message.
          *
          * @since 4.4.0
          *
-         * @param int $xmlrpc_memory_limit Default value of memory allotted.
+         * @param int $chunk_size Chunk size to parse in bytes.
          */
-        $chunk_size = apply_filters( 'xmlrpc_chunk_parsing_size', $xmlrpc_memory_limit );
+        $chunk_size = apply_filters( 'xmlrpc_chunk_parsing_size', $chunk_size );
 
         $final = false;
         do {
@@ -324,6 +325,8 @@ class IXR_Message
                 $this->_arraystructstypes[] = 'struct';
                 $this->_arraystructs[] = array();
                 break;
+            case 'value':
+                $this->_valueHasType = false;
         }
     }
 
@@ -355,8 +358,8 @@ class IXR_Message
                 break;
             case 'value':
                 // "If no type is indicated, the type is string."
-                if (trim($this->_currentTagContents) != '') {
-                    $value = (string)$this->_currentTagContents;
+                if ( !$this->_valueHasType ) {
+                    $value = trim( $this->_currentTagContents );
                     $valueFlag = true;
                 }
                 break;
@@ -387,6 +390,8 @@ class IXR_Message
         }
 
         if ($valueFlag) {
+            $this->_valueHasType = true;
+				
             if (count($this->_arraystructs) > 0) {
                 // Add value to struct or array
                 if ($this->_arraystructstypes[count($this->_arraystructstypes)-1] == 'struct') {

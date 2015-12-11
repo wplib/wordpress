@@ -164,8 +164,8 @@ final class WP_Customize_Widgets {
 	 * @since 4.2.0
 	 * @access public
 	 *
-	 * @param false|array $setting_args The arguments to the WP_Customize_Setting constructor.
-	 * @param string      $setting_id   ID for dynamic setting, usually coming from `$_POST['customized']`.
+	 * @param false|array $args       The arguments to the WP_Customize_Setting constructor.
+	 * @param string      $setting_id ID for dynamic setting, usually coming from `$_POST['customized']`.
 	 * @return false|array Setting arguments, false otherwise.
 	 */
 	public function filter_customize_dynamic_setting_args( $args, $setting_id ) {
@@ -1380,7 +1380,7 @@ final class WP_Customize_Widgets {
 		 * in place from WP_Customize_Setting::preview() will use this value
 		 * instead of the default widget instance value (an empty array).
 		 */
-		$this->manager->set_post_value( $setting_id, $instance );
+		$this->manager->set_post_value( $setting_id, $this->sanitize_widget_js_instance( $instance ) );
 
 		// Obtain the widget control with the updated instance in place.
 		ob_start();

@@ -90,13 +90,14 @@ function add_shortcode($tag, $func) {
 	global $shortcode_tags;
 
 	if ( '' == trim( $tag ) ) {
-		$message = __( 'Invalid shortcode name.  Empty name given.' );
+		$message = __( 'Invalid shortcode name: Empty name given.' );
 		_doing_it_wrong( __FUNCTION__, $message, '4.4.0' );
 		return;
 	}
 
 	if ( 0 !== preg_match( '@[<>&/\[\]\x00-\x20]@', $tag ) ) {
-		$message = sprintf( __( 'Invalid shortcode name: %s  Do not use spaces or reserved chars: & / < > [ ]' ), $tag );
+		/* translators: %s: shortcode name */
+		$message = sprintf( __( 'Invalid shortcode name: %s. Do not use spaces or reserved characters: & / < > [ ]' ), $tag );
 		_doing_it_wrong( __FUNCTION__, $message, '4.4.0' );
 		return;
 	}
@@ -314,6 +315,7 @@ function do_shortcode_tag( $m ) {
 	$attr = shortcode_parse_atts( $m[3] );
 
 	if ( ! is_callable( $shortcode_tags[ $tag ] ) ) {
+		/* translators: %s: shortcode tag */
 		$message = sprintf( __( 'Attempting to parse a shortcode without a valid callback: %s' ), $tag );
 		_doing_it_wrong( __FUNCTION__, $message, '4.3.0' );
 		return $m[0];

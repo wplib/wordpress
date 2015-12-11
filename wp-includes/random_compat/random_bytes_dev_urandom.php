@@ -74,9 +74,11 @@ function random_bytes($bytes)
             stream_set_read_buffer($fp, RANDOM_COMPAT_READ_BUFFER);
         }
     }
-    if (!is_int($bytes)) {
+    try {
+        $bytes = RandomCompat_intval($bytes);
+    } catch (TypeError $ex) {
         throw new TypeError(
-            'Length must be an integer'
+            'random_bytes(): $bytes must be an integer'
         );
     }
     if ($bytes < 1) {
@@ -130,6 +132,6 @@ function random_bytes($bytes)
      * If we reach here, PHP has failed us.
      */
     throw new Exception(
-        'PHP failed to generate random data.'
+        'Error reading from source device'
     );
 }
