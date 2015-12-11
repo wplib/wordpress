@@ -117,7 +117,7 @@ function redirect_canonical( $requested_url = null, $do_redirect = true ) {
 		$id = max( get_query_var('p'), get_query_var('page_id'), get_query_var('attachment_id') );
 		if ( $id && $redirect_post = get_post($id) ) {
 			$post_type_obj = get_post_type_object($redirect_post->post_type);
-			if ( $post_type_obj->public ) {
+			if ( $post_type_obj->public && 'auto-draft' != $redirect_post->post_status ) {
 				$redirect_url = get_permalink($redirect_post);
 				$redirect['query'] = _remove_qs_args_if_not_in_url( $redirect['query'], array( 'p', 'page_id', 'attachment_id', 'pagename', 'name', 'post_type' ), $redirect_url );
 			}
@@ -489,7 +489,7 @@ function redirect_canonical( $requested_url = null, $do_redirect = true ) {
 	$redirect_url = apply_filters( 'redirect_canonical', $redirect_url, $requested_url );
 
 	// yes, again -- in case the filter aborted the request
-	if ( ! $redirect_url || $redirect_url == $requested_url ) {
+	if ( ! $redirect_url || strip_fragment_from_url( $redirect_url ) == strip_fragment_from_url( $requested_url ) ) {
 		return;
 	}
 
@@ -532,6 +532,31 @@ function _remove_qs_args_if_not_in_url( $query_string, Array $args_to_check, $ur
 		$query_string = remove_query_arg( $args_to_check, $query_string );
 	}
 	return $query_string;
+}
+
+/**
+ * Strips the #fragment from a URL, if one is present.
+ *
+ * @since 4.4.0
+ *
+ * @param string $url The URL to strip.
+ * @return string The altered URL.
+ */
+function strip_fragment_from_url( $url ) {
+	$parsed_url = @parse_url( $url );
+	if ( ! empty( $parsed_url['host'] ) ) {
+		// This mirrors code in redirect_canonical(). It does not handle every case.
+		$url = $parsed_url['scheme'] . '://' . $parsed_url['host'];
+		if ( ! empty( $parsed_url['port'] ) ) {
+			$url .= ':' . $parsed_url['port'];
+		}
+		$url .= $parsed_url['path'];
+		if ( ! empty( $parsed_url['query'] ) ) {
+			$url .= '?' . $parsed_url['query'];
+		}
+	}
+
+	return $url;
 }
 
 /**

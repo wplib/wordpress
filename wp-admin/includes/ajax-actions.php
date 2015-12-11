@@ -1159,6 +1159,10 @@ function wp_ajax_add_menu_item() {
 					$_object = get_post( $menu_item_data['menu-item-object-id'] );
 				break;
 
+				case 'post_type_archive' :
+					$_object = get_post_type_object( $menu_item_data['menu-item-object'] );
+				break;
+
 				case 'taxonomy' :
 					$_object = get_term( $menu_item_data['menu-item-object-id'], $menu_item_data['menu-item-object'] );
 				break;
@@ -1192,7 +1196,7 @@ function wp_ajax_add_menu_item() {
 	/** This filter is documented in wp-admin/includes/nav-menu.php */
 	$walker_class_name = apply_filters( 'wp_edit_nav_menu_walker', 'Walker_Nav_Menu_Edit', $_POST['menu'] );
 
-	if ( ! class_exists( $walker_class_name, false ) )
+	if ( ! class_exists( $walker_class_name ) )
 		wp_die( 0 );
 
 	if ( ! empty( $menu_items ) ) {
@@ -1582,7 +1586,7 @@ function wp_ajax_sample_permalink() {
  * @global WP_List_Table $wp_list_table
  */
 function wp_ajax_inline_save() {
-	global $wp_list_table;
+	global $wp_list_table, $mode;
 
 	check_ajax_referer( 'inlineeditnonce', '_inline_edit' );
 
@@ -1654,6 +1658,8 @@ function wp_ajax_inline_save() {
 	edit_post();
 
 	$wp_list_table = _get_list_table( 'WP_Posts_List_Table', array( 'screen' => $_POST['screen'] ) );
+
+	$mode = $_POST['post_view'] === 'excerpt' ? 'excerpt' : 'list';
 
 	$level = 0;
 	$request_post = array( get_post( $_POST['post_ID'] ) );
@@ -2564,7 +2570,7 @@ function wp_ajax_send_attachment_to_editor() {
 	$rel = '';
 	$url = empty( $attachment['url'] ) ? '' : $attachment['url'];
 	if ( strpos( $url, 'attachment_id') || get_attachment_link( $id ) == $url ) {
-		$rel = ' rel="attachment wp-att-' . $id . '"';
+		$rel = 'attachment wp-att-' . $id;
 	}
 
 	remove_filter( 'media_send_to_editor', 'image_media_send_to_editor' );
@@ -2587,7 +2593,7 @@ function wp_ajax_send_attachment_to_editor() {
 	} else {
 		$html = isset( $attachment['post_title'] ) ? $attachment['post_title'] : '';
 		if ( ! empty( $url ) ) {
-			$html = '<a href="' . esc_url( $url ) . '"' . $rel . '>' . $html . '</a>';
+			$html = '<a href="' . esc_url( $url ) . '"' . 'rel="' . esc_attr( $rel ) . '">' . $html . '</a>';
 		}
 	}
 
@@ -2814,6 +2820,13 @@ function wp_ajax_query_themes() {
 		'per_page' => 20,
 		'fields'   => $theme_field_defaults
 	) );
+
+	if ( isset( $args['browse'] ) && 'favorites' === $args['browse'] && ! isset( $args['user'] ) ) {
+		$user = get_user_option( 'wporg_favorites' );
+		if ( $user ) {
+			$args['user'] = $user;
+		}
+	}
 
 	$old_filter = isset( $args['browse'] ) ? $args['browse'] : 'search';
 
@@ -3098,6 +3111,7 @@ function wp_ajax_update_plugin() {
 		 * For now, surface some sort of error here.
 		 */
 		if ( $plugin_update_data === true ) {
+			$status['error'] = __( 'Plugin update failed.' );
  			wp_send_json_error( $status );
 		}
 
@@ -3124,6 +3138,10 @@ function wp_ajax_update_plugin() {
 
 		wp_send_json_error( $status );
 
+	} else {
+		// An unhandled error occured
+		$status['error'] = __( 'Plugin update failed.' );
+		wp_send_json_error( $status );
 	}
 }
 
@@ -3278,4 +3296,23 @@ function wp_ajax_crop_image() {
  */
 function wp_ajax_generate_password() {
 	wp_send_json_success( wp_generate_password( 24 ) );
+}
+
+/**
+ * Ajax handler for saving the user's WordPress.org username.
+ *
+ * @since 4.4.0
+ */
+function wp_ajax_save_wporg_username() {
+	if ( ! current_user_can( 'install_themes' ) && ! current_user_can( 'install_plugins' ) ) {
+		wp_send_json_error();
+	}
+
+	$username = isset( $_REQUEST['username'] ) ? wp_unslash( $_REQUEST['username'] ) : false;
+
+	if ( ! $username ) {
+		wp_send_json_error();
+	}
+
+	wp_send_json_success( update_user_meta( get_current_user_id(), 'wporg_favorites', $username ) );
 }

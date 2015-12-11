@@ -16,8 +16,8 @@ if ( false ) {
 	<title>Error: PHP is not running</title>
 </head>
 <body class="wp-core-ui">
-	<h1 id="logo"><a href="https://wordpress.org/">WordPress</a></h1>
-	<h2>Error: PHP is not running</h2>
+	<p id="logo"><a href="https://wordpress.org/">WordPress</a></p>
+	<h1>Error: PHP is not running</h1>
 	<p>WordPress requires that your web server is running PHP. Your server does not have PHP installed, or PHP is turned off.</p>
 </body>
 </html>
@@ -69,6 +69,7 @@ function display_header( $body_classes = '' ) {
 <head>
 	<meta name="viewport" content="width=device-width" />
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="robots" content="noindex,nofollow" />
 	<title><?php _e( 'WordPress &rsaquo; Installation' ); ?></title>
 	<?php
 		wp_admin_css( 'install', true );
@@ -76,7 +77,7 @@ function display_header( $body_classes = '' ) {
 	?>
 </head>
 <body class="wp-core-ui<?php echo $body_classes ?>">
-<h1 id="logo"><a href="<?php echo esc_url( __( 'https://wordpress.org/' ) ); ?>" tabindex="-1"><?php _e( 'WordPress' ); ?></a></h1>
+<p id="logo"><a href="<?php echo esc_url( __( 'https://wordpress.org/' ) ); ?>" tabindex="-1"><?php _e( 'WordPress' ); ?></a></p>
 
 <?php
 } // end display_header()
@@ -106,6 +107,7 @@ function display_setup_form( $error = null ) {
 
 	if ( ! is_null( $error ) ) {
 ?>
+<h1><?php _ex( 'Welcome', 'Howdy' ); ?></h1>
 <p class="message"><?php echo $error; ?></p>
 <?php } ?>
 <form id="setup" method="post" action="install.php?step=2" novalidate="novalidate">
@@ -286,7 +288,7 @@ switch($step) {
 <h1><?php _ex( 'Welcome', 'Howdy' ); ?></h1>
 <p><?php _e( 'Welcome to the famous five-minute WordPress installation process! Just fill in the information below and you&#8217;ll be on your way to using the most extendable and powerful personal publishing platform in the world.' ); ?></p>
 
-<h1><?php _e( 'Information needed' ); ?></h1>
+<h2><?php _e( 'Information needed' ); ?></h2>
 <p><?php _e( 'Please provide the following information. Don&#8217;t worry, you can always change these settings later.' ); ?></p>
 
 <?php

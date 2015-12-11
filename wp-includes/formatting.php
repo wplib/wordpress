@@ -276,12 +276,13 @@ function wptexturize( $text, $reset = false ) {
 				// Searching for a digit is 10 times more expensive than for the x, so we avoid doing this one!
 				$curl = preg_replace( '/\b(\d(?(?<=0)[\d\.,]+|[\d\.,]*))x(\d[\d\.,]*)\b/', '$1&#215;$2', $curl );
 			}
+
+			// Replace each & with &#038; unless it already looks like an entity.
+			$curl = preg_replace( '/&(?!#(?:\d+|x[a-f0-9]+);|[a-z1-4]{1,8};)/i', '&#038;', $curl );
 		}
 	}
-	$text = implode( '', $textarr );
 
-	// Replace each & with &#038; unless it already looks like an entity.
-	return preg_replace( '/&(?!#(?:\d+|x[a-f0-9]+);|[a-z1-4]{1,8};)/i', '&#038;', $text );
+	return implode( '', $textarr );
 }
 
 /**
@@ -2844,13 +2845,13 @@ function human_time_diff( $from, $to = '' ) {
 		if ( $days <= 1 )
 			$days = 1;
 		$since = sprintf( _n( '%s day', '%s days', $days ), $days );
-	} elseif ( $diff < 30 * DAY_IN_SECONDS && $diff >= WEEK_IN_SECONDS ) {
+	} elseif ( $diff < MONTH_IN_SECONDS && $diff >= WEEK_IN_SECONDS ) {
 		$weeks = round( $diff / WEEK_IN_SECONDS );
 		if ( $weeks <= 1 )
 			$weeks = 1;
 		$since = sprintf( _n( '%s week', '%s weeks', $weeks ), $weeks );
-	} elseif ( $diff < YEAR_IN_SECONDS && $diff >= 30 * DAY_IN_SECONDS ) {
-		$months = round( $diff / ( 30 * DAY_IN_SECONDS ) );
+	} elseif ( $diff < YEAR_IN_SECONDS && $diff >= MONTH_IN_SECONDS ) {
+		$months = round( $diff / MONTH_IN_SECONDS );
 		if ( $months <= 1 )
 			$months = 1;
 		$since = sprintf( _n( '%s month', '%s months', $months ), $months );
@@ -3398,7 +3399,7 @@ function esc_url( $url, $protocols = null, $_context = 'display' ) {
 
 	if ( ( false !== strpos( $url, '[' ) ) || ( false !== strpos( $url, ']' ) ) ) {
 
-		$parsed = parse_url( $url );
+		$parsed = wp_parse_url( $url );
 		$front  = '';
 
 		if ( isset( $parsed['scheme'] ) ) {
@@ -3621,7 +3622,7 @@ function tag_escape( $tag_name ) {
  * @return string Absolute path.
  */
 function wp_make_link_relative( $link ) {
-	return preg_replace( '|^(https?:)?//[^/]+(/.*)|i', '$2', $link );
+	return preg_replace( '|^(https?:)?//[^/]+(/?.*)|i', '$2', $link );
 }
 
 /**
@@ -3662,6 +3663,8 @@ function sanitize_option( $option, $value ) {
 		case 'thumbnail_size_h':
 		case 'medium_size_w':
 		case 'medium_size_h':
+		case 'medium_large_size_w':
+		case 'medium_large_size_h':
 		case 'large_size_w':
 		case 'large_size_h':
 		case 'mailserver_port':
@@ -4568,7 +4571,7 @@ function print_emoji_detection_script() {
 		?>
 		<script type="text/javascript">
 			window._wpemojiSettings = <?php echo wp_json_encode( $settings ); ?>;
-			!function(a,b,c){function d(a){var c=b.createElement("canvas"),d=c.getContext&&c.getContext("2d");return d&&d.fillText?(d.textBaseline="top",d.font="600 32px Arial","flag"===a?(d.fillText(String.fromCharCode(55356,56812,55356,56807),0,0),c.toDataURL().length>3e3):(d.fillText(String.fromCharCode(55357,56835),0,0),0!==d.getImageData(16,16,1,1).data[0])):!1}function e(a){var c=b.createElement("script");c.src=a,c.type="text/javascript",b.getElementsByTagName("head")[0].appendChild(c)}var f,g;c.supports={simple:d("simple"),flag:d("flag")},c.DOMReady=!1,c.readyCallback=function(){c.DOMReady=!0},c.supports.simple&&c.supports.flag||(g=function(){c.readyCallback()},b.addEventListener?(b.addEventListener("DOMContentLoaded",g,!1),a.addEventListener("load",g,!1)):(a.attachEvent("onload",g),b.attachEvent("onreadystatechange",function(){"complete"===b.readyState&&c.readyCallback()})),f=c.source||{},f.concatemoji?e(f.concatemoji):f.wpemoji&&f.twemoji&&(e(f.twemoji),e(f.wpemoji)))}(window,document,window._wpemojiSettings);
+			!function(a,b,c){function d(a){var c=b.createElement("canvas"),d=c.getContext&&c.getContext("2d");return d&&d.fillText?(d.textBaseline="top",d.font="600 32px Arial","flag"===a?(d.fillText(String.fromCharCode(55356,56806,55356,56826),0,0),c.toDataURL().length>3e3):("simple"===a?d.fillText(String.fromCharCode(55357,56835),0,0):d.fillText(String.fromCharCode(55356,57135),0,0),0!==d.getImageData(16,16,1,1).data[0])):!1}function e(a){var c=b.createElement("script");c.src=a,c.type="text/javascript",b.getElementsByTagName("head")[0].appendChild(c)}var f,g;c.supports={simple:d("simple"),flag:d("flag"),unicode8:d("unicode8")},c.DOMReady=!1,c.readyCallback=function(){c.DOMReady=!0},c.supports.simple&&c.supports.flag&&c.supports.unicode8||(g=function(){c.readyCallback()},b.addEventListener?(b.addEventListener("DOMContentLoaded",g,!1),a.addEventListener("load",g,!1)):(a.attachEvent("onload",g),b.attachEvent("onreadystatechange",function(){"complete"===b.readyState&&c.readyCallback()})),f=c.source||{},f.concatemoji?e(f.concatemoji):f.wpemoji&&f.twemoji&&(e(f.twemoji),e(f.wpemoji)))}(window,document,window._wpemojiSettings);
 		</script>
 		<?php
 	}
@@ -4771,15 +4774,15 @@ function wp_staticize_emoji_for_email( $mail ) {
 }
 
 /**
- * Shorten an URL, to be used as link text
+ * Shorten an URL, to be used as link text.
  *
  * @since 1.2.0
- * @since 4.4.0 Moved to wp-includes/formatting.php from wp-admin/includes/misc.php and added $length param
+ * @since 4.4.0 Moved to wp-includes/formatting.php from wp-admin/includes/misc.php and added $length param.
  *
- * @param string $url URL to shorten
- * @param  int $length Maxiumum length of url to return
- * @return string
-*/
+ * @param string $url    URL to shorten.
+ * @param int    $length Optional. Maximum length of the shortened URL. Default 35 characters.
+ * @return string Shortened URL.
+ */
 function url_shorten( $url, $length = 35 ) {
 	$stripped = str_replace( array( 'https://', 'http://', 'www.' ), '', $url );
 	$short_url = untrailingslashit( $stripped );
