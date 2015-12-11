@@ -412,7 +412,7 @@ class WP_Comment_Query {
 		// Fetch full comment objects from the primed cache.
 		$_comments = array();
 		foreach ( $comment_ids as $comment_id ) {
-			if ( $_comment = wp_cache_get( $comment_id, 'comment' ) ) {
+			if ( $_comment = get_comment( $comment_id ) ) {
 				$_comments[] = $_comment;
 			}
 		}
@@ -883,7 +883,7 @@ class WP_Comment_Query {
 			}
 
 			$where = 'WHERE ' . implode( ' AND ', $where_clauses ) . ' AND comment_parent IN (' . implode( ',', array_map( 'intval', $parent_ids ) ) . ')';
-			$comment_ids = $wpdb->get_col( "{$this->sql_clauses['select']} {$this->sql_clauses['from']} {$where} {$this->sql_clauses['groupby']}" );
+			$comment_ids = $wpdb->get_col( "{$this->sql_clauses['select']} {$this->sql_clauses['from']} {$where} {$this->sql_clauses['groupby']} ORDER BY comment_date_gmt ASC, comment_ID ASC" );
 
 			$level++;
 			$levels[ $level ] = $comment_ids;
